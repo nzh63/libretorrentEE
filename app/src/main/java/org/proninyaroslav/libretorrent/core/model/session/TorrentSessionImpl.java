@@ -900,7 +900,9 @@ public class TorrentSessionImpl extends SessionManager
                     version[0], version[1], version[2], 0);
             sp.set_str(settings_pack.string_types.peer_fingerprint.swigValue(), fingerprint);
 
-            String userAgent = String.format(USER_AGENT, Utils.getAppVersionNumber(versionName));
+            /* Use the full version name (incl. the EE suffix) so that the fork
+             * version is distinguishable from upstream in tracker statistics */
+            String userAgent = String.format(USER_AGENT, versionName);
             sp.set_str(settings_pack.string_types.user_agent.swigValue(), userAgent);
 
             Log.i(TAG, "Peer fingerprint: " + sp.get_str(settings_pack.string_types.peer_fingerprint.swigValue()));

@@ -1,3 +1,18 @@
+### Version 4.1.1-ee1 (2026-08-16)
+
+**LibreTorrentEE fork release** on top of upstream 4.1.1:
+
+* Added:
+    - PeerBanHelper-compatible anti-leech engine (in-process, no external server)
+    - BTN (BitTorrent Threat Network) support (protocol v20, Sparkle instance)
+    - Live anti-leech activity log in the settings
+* Bugfixes:
+    - Auto-ban expiry now enforced (configurable ban duration)
+    - PBH check interval changes are applied immediately
+    - BTN rule/identity caches are kept when a fetch fails to parse
+    - Decimal input allowed in PBH thresholds
+    - Torrent/file names wrap instead of being ellipsized
+
 ### Version 4.1.1 (2026-07-24)
 
 Temporarily downgrade libtorrent4j to maintain support for Android 8.1 and below

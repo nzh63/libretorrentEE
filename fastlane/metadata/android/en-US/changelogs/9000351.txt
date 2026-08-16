@@ -1,0 +1,10 @@
+* Added:
+    - PeerBanHelper-compatible anti-leech engine (in-process, no external server)
+    - BTN (BitTorrent Threat Network) support (protocol v20)
+    - Live anti-leech activity log in the settings
+* Bugfixes:
+    - Auto-ban expiry now enforced (configurable ban duration)
+    - PBH check interval changes are applied immediately
+    - BTN rule/identity caches are kept when a fetch fails to parse
+    - Decimal input allowed in PBH thresholds
+    - Torrent/file names wrap instead of being ellipsized
