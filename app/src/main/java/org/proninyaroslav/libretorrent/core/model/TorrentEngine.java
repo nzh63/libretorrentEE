@@ -57,6 +57,8 @@ import org.proninyaroslav.libretorrent.core.model.stream.TorrentInputStream;
 import org.proninyaroslav.libretorrent.core.model.stream.TorrentStream;
 import org.proninyaroslav.libretorrent.core.model.stream.TorrentStreamServer;
 import org.proninyaroslav.libretorrent.core.pbh.BanResult;
+import org.proninyaroslav.libretorrent.core.pbh.ClientNameMatcher;
+import org.proninyaroslav.libretorrent.core.pbh.DisconnectBans;
 import org.proninyaroslav.libretorrent.core.pbh.IpUtils;
 import org.proninyaroslav.libretorrent.core.pbh.PeerBanHelperEngine;
 import org.proninyaroslav.libretorrent.core.pbh.PeerSnapshot;
@@ -89,12 +91,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -141,9 +146,36 @@ public class TorrentEngine {
     private final PeerBanHelperEngine pbhEngine = new PeerBanHelperEngine();
     /* BTN (BitTorrent Threat Network) rule management */
     private final BtnManager btnManager;
+    /*
+     * Serializes the anti-leech scans (interval ticks and manual triggers)
+     * so detection state is never accessed concurrently. The scan itself
+     * performs no network I/O.
+     */
+    private final ExecutorService pbhScanExec = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "PBHScan");
+        t.setDaemon(true);
+        return t;
+    });
+    /*
+     * Runs all BTN network work (rule refresh, ban/swarm submission) off the
+     * scan path, so a slow BTN server cannot stall peer detection. Single
+     * thread keeps the tasks ordered and their rate-limit state single-
+     * threaded.
+     */
+    private final ExecutorService btnExec = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "BtnNetwork");
+        t.setDaemon(true);
+        return t;
+    });
+    /* Rate-limit timestamps, only accessed on btnExec */
     private long lastBtnRefreshMs;
     private long lastBanSubmitMs;
     private long lastSwarmSubmitMs;
+    /* Short-lived fast-PCB disconnect probes, kept out of the blacklist */
+    private final DisconnectBans disconnectBans = new DisconnectBans();
+    /* PCB state TTL: evict tracking entries not seen for this long */
+    private static final long PBH_STATE_TTL_MS = 24 * 3600_000L; /* 24 h */
+    private long lastPbhStateEvictMs;
     /* Periodic ban scan; replaced when the check interval is changed */
     private Disposable pbhScanDisposable;
     /* Guards access to pbhScanDisposable from the settings observer */
@@ -332,6 +364,10 @@ public class TorrentEngine {
      * Starts (or restarts with a new interval) the periodic anti-leech scan.
      * Uses a raw interval Observable so the delay resets to the new value
      * immediately when the user changes the check interval setting.
+     *
+     * The tick only enqueues the scan; the actual work runs on the dedicated
+     * single-thread pbhScanExec (never on the Rx computation scheduler that
+     * interval emits on), so concurrent triggers cannot overlap.
      */
     private void startPbhScan() {
         long interval = Math.max(1, pref.pbhCheckInterval());
@@ -340,9 +376,19 @@ public class TorrentEngine {
             if (pbhScanDisposable != null && !pbhScanDisposable.isDisposed())
                 pbhScanDisposable.dispose();
             pbhScanDisposable = Observable.interval(interval, TimeUnit.SECONDS)
-                    .subscribeOn(Schedulers.io())
-                    .subscribe((__) -> checkAndBanBadPeers());
+                    .observeOn(Schedulers.io())
+                    .subscribe((__) -> submitPbhScan());
         }
+    }
+
+    private void submitPbhScan() {
+        pbhScanExec.execute(() -> {
+            try {
+                checkAndBanBadPeers();
+            } catch (Exception e) {
+                Log.e(TAG, "[PBH] scan failed: " + Log.getStackTraceString(e));
+            }
+        });
     }
 
     private void printSessionLog(List<LogEntry> entries) {
@@ -615,6 +661,9 @@ public class TorrentEngine {
                     if (!isRunning())
                         return;
                     session.deleteTorrent(id, withFiles);
+                    // Drop anti-leech tracking state of the deleted torrent
+                    pbhEngine.evictTorrentState(id);
+                    swarmTracks.keySet().removeIf(k -> k.startsWith(id + "|"));
                 }));
     }
 
@@ -989,7 +1038,7 @@ public class TorrentEngine {
             pref.pbhAutoBannedIps(autoBans);
 
         if (isRunning())
-            session.setBannedIps(bannedIps);
+            applyEffectiveBannedIps();
     }
 
     /*
@@ -999,9 +1048,7 @@ public class TorrentEngine {
 
     public void setPeerUserAgentBlacklist(@NonNull Set<String> bannedUserAgents) {
         pref.peerUserAgentBlacklist(bannedUserAgents);
-        disposables.add(Completable.fromRunnable(this::checkAndBanBadPeers)
-                .subscribeOn(Schedulers.io())
-                .subscribe());
+        submitPbhScan();
     }
 
     /*
@@ -1020,41 +1067,68 @@ public class TorrentEngine {
     /*
      * Scans connected peers of all running torrents and bans:
      *  - peers flagged by the PeerBanHelper-compatible anti-leech engine
-     *    (AntiVampire, progress-cheat, client-name and IP/CIDR rules, BTN
-     *    cloud rules);
-     *  - peers whose user agent matches the legacy user-agent blacklist.
-     * Banned IPs are persisted and applied to the session IP filter, which
-     * disconnects the peers and prevents reconnections.
+     *    (AntiVampire, progress-cheat, IP/CIDR rules, BTN cloud rules);
+     *  - peers whose user agent matches the user-agent blacklist
+     *    (equivalent of PBH's ClientNameBlacklist; enforced regardless of
+     *    the anti-leech master switch since it is a manual list).
+     *
+     * Fast-PCB probes (BAN_FOR_DISCONNECT) are NOT real bans: the peer is
+     * disconnected and blocked for pcbFastPcbTestBlockingDuration only, and
+     * is not persisted to the blacklist nor submitted to BTN.
+     *
+     * Runs on pbhScanExec; performs no network I/O (BTN work is enqueued
+     * onto btnExec).
      */
 
     private void checkAndBanBadPeers() {
         if (!isRunning())
             return;
 
-        refreshBtnRules();
+        long nowMs = System.currentTimeMillis();
+        evictPbhState(nowMs);
 
         PbhSettings settings = buildPbhSettings();
-        unbanExpiredAutoBans();
+        unbanExpiredAutoBans(nowMs);
+        expireDisconnectBans(nowMs);
+
+        refreshBtnRulesAsync();
 
         List<TorrentSnapshot> snapshots = buildTorrentSnapshots();
+        Map<String, TorrentSnapshot> torrentById = new HashMap<>();
+        for (TorrentSnapshot torrent : snapshots)
+            torrentById.put(torrent.id, torrent);
 
         // Collect bans with the peer/torrent context needed for BTN submission.
         List<BanContext> newBans = new ArrayList<>();
+        Set<String> newBannedIps = new LinkedHashSet<>();
+        List<String> disconnectProbes = new ArrayList<>();
 
         // Run the PeerBanHelper-compatible detection engine if enabled.
         if (settings.enabled) {
-            List<BanResult> pbhBans = pbhEngine.evaluate(snapshots, settings);
-            for (BanResult ban : pbhBans) {
+            for (BanResult ban : pbhEngine.evaluate(snapshots, settings)) {
                 if (ban == null || ban.peerIp == null)
                     continue;
+                if (ban.action == BanResult.Action.BAN_FOR_DISCONNECT) {
+                    // Temporary probe: disconnect only, never a real ban.
+                    disconnectProbes.add(ban.peerIp);
+                    logPbh("disconnect probe by " + ban.module + ": " + ban.peerIp +
+                            (ban.reason == null ? "" : " (" + ban.reason + ")"));
+                    continue;
+                }
+                if (!newBannedIps.add(ban.peerIp))
+                    continue; // already banned by another module this scan
                 String msg = "ban by " + ban.module + ": " + ban.peerIp +
                         (ban.reason == null ? "" : " (" + ban.reason + ")");
                 logPbh(msg);
-                newBans.add(new BanContext(ban, findPeer(snapshots, ban.peerIp), findTorrent(snapshots, ban.peerIp)));
+                TorrentSnapshot torrent = ban.torrentId != null
+                        ? torrentById.get(ban.torrentId) : null;
+                newBans.add(new BanContext(ban,
+                        torrent != null ? findPeerIn(torrent, ban.peerIp) : null,
+                        torrent));
             }
         }
 
-        // Keep the legacy user-agent blacklist behaviour as a fallback.
+        // User-agent blacklist (manual list, independent of the master switch).
         Set<String> bannedIps = new HashSet<>(pref.peerIpBlacklist());
         Set<String> bannedUserAgents = pref.peerUserAgentBlacklist();
         if (!bannedUserAgents.isEmpty()) {
@@ -1062,34 +1136,79 @@ public class TorrentEngine {
                 for (PeerSnapshot peer : torrent.peers) {
                     if (peer.ip == null || peer.ip.isEmpty() || bannedIps.contains(peer.ip))
                         continue;
-                    if (isBannedUserAgent(peer.client, bannedUserAgents)) {
-                        String msg = "ban by legacy user-agent blacklist: " + peer.ip +
+                    if (ClientNameMatcher.matches(peer.client, bannedUserAgents)) {
+                        String msg = "ban by user-agent blacklist: " + peer.ip +
                                 " (client=" + peer.client + ")";
                         logPbh(msg);
                         newBans.add(new BanContext(
-                                BanResult.ban("legacy-user-agent", peer.ip, "banned user agent"),
+                                BanResult.ban("user-agent-blacklist", peer.ip, "banned user agent")
+                                        .withTorrentId(torrent.id),
                                 peer, torrent));
                     }
                 }
             }
         }
 
-        if (newBans.isEmpty()) {
-            submitSwarmSnapshot(snapshots);
-            return;
-        }
-
-        Set<String> newBannedIps = new HashSet<>();
+        // Distinct IPs of the real bans of this scan.
+        newBannedIps.clear();
         for (BanContext ctx : newBans)
             newBannedIps.add(ctx.ban.peerIp);
 
-        bannedIps.addAll(newBannedIps);
-        pref.peerIpBlacklist(bannedIps);
-        session.banIps(newBannedIps);
-        recordAutoBans(newBannedIps);
+        // Apply the fast-PCB disconnect probes (short block, auto-expires).
+        if (!disconnectProbes.isEmpty()) {
+            for (String ip : disconnectProbes)
+                disconnectBans.add(ip, settings.pcbFastPcbTestBlockingDurationMs, nowMs);
+            session.banIps(new HashSet<>(disconnectProbes));
+            logPbh("fast-PCB probe: disconnected " + disconnectProbes.size() +
+                    " peer(s) for " + settings.pcbFastPcbTestBlockingDurationMs + " ms");
+        }
 
-        submitBans(newBans);
-        submitSwarmSnapshot(snapshots);
+        // Persist and apply the real bans.
+        newBannedIps.removeAll(bannedIps);
+        if (!newBannedIps.isEmpty()) {
+            /*
+             * Only IPs that were NOT already blacklisted count as new
+             * auto-bans; this keeps manually banned IPs out of the expiry
+             * bookkeeping so a manual ban is never auto-unbanned later.
+             */
+            bannedIps.addAll(newBannedIps);
+            pref.peerIpBlacklist(bannedIps);
+            session.banIps(newBannedIps);
+            recordAutoBans(newBannedIps);
+        }
+
+        if (!newBans.isEmpty())
+            submitBansAsync(newBans);
+        submitSwarmSnapshotAsync(snapshots);
+    }
+
+    /*
+     * Periodically drops anti-leech tracking state that has not been touched
+     * recently, so it cannot grow without bound. Runs at most once per hour.
+     */
+    private void evictPbhState(long nowMs) {
+        if (nowMs - lastPbhStateEvictMs < 3600_000L)
+            return;
+        lastPbhStateEvictMs = nowMs;
+        pbhEngine.evictStaleState(PBH_STATE_TTL_MS, nowMs);
+        evictStaleSwarmTracks(nowMs);
+    }
+
+    /*
+     * Removes expired fast-PCB disconnect probes and lifts the block. Called
+     * from the scan before detection so probes never outlive their duration.
+     */
+    private void expireDisconnectBans(long nowMs) {
+        if (!disconnectBans.hasExpired(nowMs))
+            return;
+
+        Set<String> expired = disconnectBans.removeExpired(nowMs);
+        if (expired.isEmpty())
+            return;
+
+        if (isRunning())
+            applyEffectiveBannedIps();
+        logPbh("fast-PCB probe expired, unblocked: " + String.join(", ", expired));
     }
 
     /*
@@ -1131,12 +1250,11 @@ public class TorrentEngine {
      * Removes auto-bans whose expiry time has passed (and unbans those IPs).
      * Skipped entirely when the ban duration is 0 (permanent bans).
      */
-    private void unbanExpiredAutoBans() {
+    private void unbanExpiredAutoBans(long now) {
         long durationMs = pref.pbhBanDuration();
         if (durationMs <= 0)
             return;
 
-        long now = System.currentTimeMillis();
         Set<String> autoBans = new HashSet<>(pref.pbhAutoBannedIps());
         if (autoBans.isEmpty())
             return;
@@ -1157,7 +1275,7 @@ public class TorrentEngine {
         bannedIps.removeAll(expired);
         pref.peerIpBlacklist(bannedIps);
         if (isRunning())
-            session.setBannedIps(bannedIps);
+            applyEffectiveBannedIps();
 
         String msg = expired.size() + " auto-ban(s) expired, unbanned: "
                 + String.join(", ", expired);
@@ -1192,36 +1310,48 @@ public class TorrentEngine {
         return null;
     }
 
-    /* Locates the peer snapshot with the given IP across all torrents. */
+    /* Locates the peer snapshot with the given IP within one torrent. */
     @Nullable
-    private PeerSnapshot findPeer(List<TorrentSnapshot> snapshots, String ip) {
-        for (TorrentSnapshot torrent : snapshots) {
-            for (PeerSnapshot peer : torrent.peers) {
-                if (peer.ip != null && peer.ip.equals(ip))
-                    return peer;
-            }
-        }
-        return null;
-    }
-
-    /* Locates the torrent snapshot that contains a peer with the given IP. */
-    @Nullable
-    private TorrentSnapshot findTorrent(List<TorrentSnapshot> snapshots, String ip) {
-        for (TorrentSnapshot torrent : snapshots) {
-            for (PeerSnapshot peer : torrent.peers) {
-                if (peer.ip != null && peer.ip.equals(ip))
-                    return torrent;
-            }
+    private static PeerSnapshot findPeerIn(TorrentSnapshot torrent, String ip) {
+        for (PeerSnapshot peer : torrent.peers) {
+            if (peer.ip != null && peer.ip.equals(ip))
+                return peer;
         }
         return null;
     }
 
     /*
-     * Submits the collected bans to BTN (split into requests of at most 1000
-     * entries). Rate-limited by BTN_MIN_BAN_SUBMIT_INTERVAL_MS. Logs the
-     * outcome so the user can see whether the submission succeeded.
+     * The effective set of IPs to block in the session: the persisted
+     * blacklist plus the still-active fast-PCB disconnect probes. Replaces
+     * the session-level ban set wholesale.
      */
-    private void submitBans(List<BanContext> bans) {
+    private void applyEffectiveBannedIps() {
+        Set<String> effective = new HashSet<>(pref.peerIpBlacklist());
+        effective.addAll(disconnectBans.active(System.currentTimeMillis()));
+        session.setBannedIps(effective);
+    }
+
+    /*
+     * Enqueues a BTN ban submission onto btnExec, so the scan is never
+     * blocked on network I/O. The captured context is immutable.
+     */
+    private void submitBansAsync(List<BanContext> bans) {
+        List<BanContext> snapshot = new ArrayList<>(bans);
+        btnExec.execute(() -> {
+            try {
+                doSubmitBans(snapshot);
+            } catch (Exception e) {
+                Log.e(TAG, "[PBH] BTN ban submission error: " + Log.getStackTraceString(e));
+            }
+        });
+    }
+
+    /*
+     * Submits the collected bans to BTN (split into requests of at most 1000
+     * entries, deduplicated per IP). Rate-limited by
+     * BTN_MIN_BAN_SUBMIT_INTERVAL_MS. Runs on btnExec.
+     */
+    private void doSubmitBans(List<BanContext> bans) {
         if (bans.isEmpty())
             return;
         BtnSettings btnSettings = buildBtnSettings();
@@ -1234,7 +1364,10 @@ public class TorrentEngine {
         lastBanSubmitMs = now;
 
         List<BtnPayload.BanEntry> entries = new ArrayList<>();
+        Set<String> seenIps = new HashSet<>();
         for (BanContext ctx : bans) {
+            if (!seenIps.add(ctx.ban.peerIp))
+                continue; // one entry per IP, even if several modules hit it
             BtnPayload.BanEntry e = new BtnPayload.BanEntry();
             e.banAtMs = now;
             e.peerIp = ctx.ban.peerIp;
@@ -1250,6 +1383,7 @@ public class TorrentEngine {
             }
             if (ctx.torrent != null) {
                 e.torrentIdentifier = TorrentIdentifier.getHashedIdentifier(ctx.torrent.id);
+                e.torrentIsPrivate = ctx.torrent.privateTorrent;
                 e.torrentSize = ctx.torrent.totalSize;
                 e.downloaderProgress = ctx.torrent.totalSize == 0 ? 0.0
                         : (double) ctx.torrent.completedSize / ctx.torrent.totalSize;
@@ -1286,10 +1420,24 @@ public class TorrentEngine {
     }
 
     /*
-     * Submits the current swarm snapshot (all connected peers of all
-     * torrents) to BTN every BTN_SWARM_SUBMIT_INTERVAL_MS.
+     * Enqueues a BTN swarm submission onto btnExec.
      */
-    private void submitSwarmSnapshot(List<TorrentSnapshot> snapshots) {
+    private void submitSwarmSnapshotAsync(List<TorrentSnapshot> snapshots) {
+        List<TorrentSnapshot> snapshot = new ArrayList<>(snapshots);
+        btnExec.execute(() -> {
+            try {
+                doSubmitSwarmSnapshot(snapshot);
+            } catch (Exception e) {
+                Log.e(TAG, "[PBH] BTN swarm submission error: " + Log.getStackTraceString(e));
+            }
+        });
+    }
+
+    /*
+     * Submits the current swarm snapshot (all connected peers of all
+     * torrents) to BTN every BTN_SWARM_SUBMIT_INTERVAL_MS. Runs on btnExec.
+     */
+    private void doSubmitSwarmSnapshot(List<TorrentSnapshot> snapshots) {
         BtnSettings btnSettings = buildBtnSettings();
         if (!btnSettings.enabled || !btnSettings.submitSwarmEnabled)
             return;
@@ -1307,6 +1455,7 @@ public class TorrentEngine {
             for (PeerSnapshot peer : torrent.peers) {
                 BtnPayload.SwarmEntry e = new BtnPayload.SwarmEntry();
                 e.torrentIdentifier = torrentId;
+                e.torrentIsPrivate = torrent.privateTorrent;
                 e.torrentSize = torrent.totalSize;
                 e.downloader = btnSettings.installationId == null || btnSettings.installationId.isEmpty()
                         ? "LibreTorrent" : btnSettings.installationId;
@@ -1316,13 +1465,31 @@ public class TorrentEngine {
                 e.peerPort = peer.port;
                 e.peerClientName = peer.client;
                 e.peerProgress = peer.progressPpm / 1_000_000.0;
-                e.toPeerTraffic = peer.totalUpload;
-                e.toPeerTrafficOffset = peer.totalUpload;
-                e.fromPeerTraffic = peer.totalDownload;
-                e.fromPeerTrafficOffset = peer.totalDownload;
-                e.firstTimeSeenMs = now;
-                e.lastTimeSeenMs = now;
+                SwarmTrack track = swarmTracks.get(swarmKey(torrent.id, peer.ip));
+                if (track != null) {
+                    /*
+                     * Traffic offsets reconstruct the true cumulative traffic
+                     * across reconnects: the server adds the offset to the
+                     * connection-local counters reported above.
+                     */
+                    e.toPeerTraffic = peer.totalUpload;
+                    e.toPeerTrafficOffset = track.uploadedOffset;
+                    e.fromPeerTraffic = peer.totalDownload;
+                    e.fromPeerTrafficOffset = track.downloadedOffset;
+                    e.firstTimeSeenMs = track.firstSeenMs;
+                    e.lastTimeSeenMs = track.lastSeenMs;
+                    e.uploadSpeedMax = track.upSpeedMax;
+                    e.downloadSpeedMax = track.downSpeedMax;
+                } else {
+                    e.toPeerTraffic = peer.totalUpload;
+                    e.toPeerTrafficOffset = 0;
+                    e.fromPeerTraffic = peer.totalDownload;
+                    e.fromPeerTrafficOffset = 0;
+                    e.firstTimeSeenMs = now;
+                    e.lastTimeSeenMs = now;
+                }
                 e.uploadSpeed = peer.upSpeed;
+                e.downloadSpeed = peer.downSpeed;
                 entries.add(e);
             }
         }
@@ -1356,6 +1523,66 @@ public class TorrentEngine {
     }
 
     /*
+     * Per (torrent, peer) swarm observations used for BTN submissions: real
+     * first/last-seen times and traffic offsets that survive reconnects.
+     */
+    private static final class SwarmTrack {
+        long firstSeenMs;
+        volatile long lastSeenMs;
+        /* Traffic totals of previous connections, added on counter resets */
+        volatile long uploadedOffset;
+        volatile long downloadedOffset;
+        volatile long lastUploaded;
+        volatile long lastDownloaded;
+        volatile long upSpeedMax;
+        volatile long downSpeedMax;
+    }
+
+    private final ConcurrentHashMap<String, SwarmTrack> swarmTracks = new ConcurrentHashMap<>();
+
+    private static String swarmKey(String torrentId, String ip) {
+        return torrentId + "|" + ip;
+    }
+
+    /*
+     * Updates the swarm tracking state for every peer of the given snapshot.
+     * Called on every scan so speed maxima and last-seen times stay fresh.
+     */
+    private void updateSwarmTracks(List<TorrentSnapshot> snapshots, long nowMs) {
+        Set<String> liveKeys = new HashSet<>();
+        for (TorrentSnapshot torrent : snapshots) {
+            for (PeerSnapshot peer : torrent.peers) {
+                if (peer.ip == null || peer.ip.isEmpty())
+                    continue;
+                String key = swarmKey(torrent.id, peer.ip);
+                liveKeys.add(key);
+                SwarmTrack track = swarmTracks.computeIfAbsent(key, k -> {
+                    SwarmTrack t = new SwarmTrack();
+                    t.firstSeenMs = nowMs;
+                    return t;
+                });
+                track.lastSeenMs = nowMs;
+                if (peer.totalUpload < track.lastUploaded)
+                    track.uploadedOffset += track.lastUploaded; // counter reset
+                track.lastUploaded = Math.max(peer.totalUpload, track.lastUploaded);
+                if (peer.totalDownload < track.lastDownloaded)
+                    track.downloadedOffset += track.lastDownloaded;
+                track.lastDownloaded = Math.max(peer.totalDownload, track.lastDownloaded);
+                track.upSpeedMax = Math.max(track.upSpeedMax, peer.upSpeed);
+                track.downSpeedMax = Math.max(track.downSpeedMax, peer.downSpeed);
+            }
+        }
+        /* Drop entries of peers that are no longer connected */
+        swarmTracks.keySet().retainAll(liveKeys);
+    }
+
+    /* Drops swarm tracking state that has not been refreshed recently. */
+    private void evictStaleSwarmTracks(long nowMs) {
+        swarmTracks.entrySet().removeIf(e ->
+                nowMs - e.getValue().lastSeenMs > PBH_STATE_TTL_MS);
+    }
+
+    /*
      * Builds the immutable settings snapshot consumed by the anti-leech engine
      * from the current user preferences.
      */
@@ -1368,8 +1595,6 @@ public class TorrentEngine {
                 .antiVampireEnabled(pref.pbhAntiVampireEnabled())
                 .antiVampireUploadThreshold(pref.pbhAntiVampireUploadThreshold())
                 .antiVampireMinProgressPpm(pref.pbhAntiVampireMinProgressPpm())
-                .clientNameBlacklistEnabled(pref.pbhClientNameBlacklistEnabled())
-                .clientNameBlacklist(pref.peerUserAgentBlacklist())
                 .ipCidrBlacklist(pref.peerIpBlacklist())
                 .pcbEnabled(pref.pbhPcbEnabled())
                 .pcbTorrentMinimumSize(pref.pbhPcbTorrentMinimumSize())
@@ -1402,12 +1627,29 @@ public class TorrentEngine {
     }
 
     /*
+     * Enqueues a BTN rule refresh onto btnExec so the scan is never blocked
+     * on network I/O. Refreshed rules apply from the next scan on.
+     */
+    private void refreshBtnRulesAsync() {
+        if (!pref.btnEnabled())
+            return;
+
+        btnExec.execute(() -> {
+            try {
+                doRefreshBtnRules();
+            } catch (Exception e) {
+                Log.e(TAG, "[PBH] " + Log.getStackTraceString(e));
+            }
+        });
+    }
+
+    /*
      * Refreshes the BTN cloud rules at most once per minute (the intervals
      * from the server config are much longer). Updates the engine's BTN module
-     * with the latest rules.
+     * with the latest rules. Runs on btnExec.
      */
 
-    private void refreshBtnRules() {
+    private void doRefreshBtnRules() {
         if (!pref.btnEnabled())
             return;
 
@@ -1422,7 +1664,7 @@ public class TorrentEngine {
             String msg = "BTN rules refreshed: " +
                     rules.ipDenylist.size() + " deny IPs, " +
                     rules.ipAllowlist.size() + " allow IPs, " +
-                    rules.clientNamePatterns.size() + " client-name patterns";
+                    rules.clientNameRules.size() + " client-name rules";
             logPbh(msg);
         } catch (Exception e) {
             logPbh("Unable to refresh BTN rules: " + e.getMessage());
@@ -1432,7 +1674,7 @@ public class TorrentEngine {
 
     /*
      * Builds a snapshot of all running torrents and their connected peers for
-     * the anti-leech engine.
+     * the anti-leech engine, and refreshes the BTN swarm tracking state.
      */
 
     private List<TorrentSnapshot> buildTorrentSnapshots() {
@@ -1450,9 +1692,13 @@ public class TorrentEngine {
             for (PeerInfo peer : peerInfoList) {
                 if (peer == null || peer.ip == null || peer.ip.isEmpty())
                     continue;
-                // libtorrent exposes peer endpoints as "tcp://1.2.3.4:6881";
-                // the ban engine and IP filter need the bare address.
-                String ip = IpUtils.stripPort(peer.ip);
+                /*
+                 * libtorrent exposes peer endpoints as "tcp://1.2.3.4:6881"
+                 * and may report IPv4 as IPv4-mapped IPv6 ("::ffff:1.2.3.4");
+                 * normalise to the bare, canonical address so the ban engine
+                 * and IP filter see one identity per peer.
+                 */
+                String ip = IpUtils.normalizeIp(peer.ip);
                 if (ip.isEmpty())
                     continue;
                 peers.add(new PeerSnapshot(
@@ -1462,7 +1708,8 @@ public class TorrentEngine {
                         peer.totalUpload,
                         peer.totalDownload,
                         peer.progressPpm,
-                        peer.upSpeed));
+                        peer.upSpeed,
+                        peer.downSpeed));
             }
 
             snapshots.add(new TorrentSnapshot(
@@ -1470,24 +1717,13 @@ public class TorrentEngine {
                     torrent.name,
                     task.getSize(),
                     task.getReceivedBytes(),
+                    task.isPrivate(),
                     peers));
         }
 
+        updateSwarmTracks(snapshots, System.currentTimeMillis());
+
         return snapshots;
-    }
-
-    private boolean isBannedUserAgent(String client, Set<String> bannedUserAgents) {
-        if (client == null || bannedUserAgents == null || bannedUserAgents.isEmpty())
-            return false;
-
-        String clientLower = client.toLowerCase(Locale.ROOT);
-        for (String userAgent : bannedUserAgents) {
-            if (userAgent != null && !userAgent.isEmpty() &&
-                    clientLower.contains(userAgent.toLowerCase(Locale.ROOT)))
-                return true;
-        }
-
-        return false;
     }
 
     public int getUploadSpeedLimit(@NonNull String id) {
@@ -1679,7 +1915,7 @@ public class TorrentEngine {
     }
 
     private void handleOnSessionStarted() {
-        session.setBannedIps(pref.peerIpBlacklist());
+        applyEffectiveBannedIps();
 
         if (pref.enableIpFiltering()) {
             String path = pref.ipFilteringFile();

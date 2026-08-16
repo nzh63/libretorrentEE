@@ -105,6 +105,24 @@ public final class ProgressCheatModule implements BanModule {
                         "excessive client: uploaded " + computedUploaded
                                 + " > max allowed " + maxAllowed);
             }
+
+            // 1b. Excessive client on an incomplete task: while we are still
+            //     downloading, a peer cannot have received more from us than
+            //     we have completed ourselves (+ threshold).
+            if (computedCompletedSize > 0 && computedUploaded > computedCompletedSize) {
+                long maxAllowedIncomplete = (long) (Math.max(computedCompletedSize,
+                        settings.pcbTorrentMinimumSize)
+                        * settings.pcbExcessiveThreshold);
+                if (computedUploaded > maxAllowedIncomplete) {
+                    addrState.resetBanDelayWindow();
+                    prefixState.resetBanDelayWindow();
+                    record(addrState, prefixState, peer, computedCompletedSize, nowMs);
+                    return BanResult.ban(name(), peer.ip,
+                            "excessive client (incomplete task): uploaded " + computedUploaded
+                                    + " > completed " + computedCompletedSize
+                                    + " * threshold " + maxAllowedIncomplete);
+                }
+            }
         }
 
         // 2. Fast PCB test: proactively disconnect a peer that has already
@@ -232,5 +250,31 @@ public final class ProgressCheatModule implements BanModule {
     public void clear() {
         addrStates.clear();
         prefixStates.clear();
+    }
+
+    /*
+     * Removes tracking states that have not been updated for longer than
+     * maxAgeMs (based on the last time the peer was seen, falling back to the
+     * state creation time when the peer never uploaded anything). Without
+     * this, the state maps grow without bound on long-running sessions.
+     */
+    public void evictStale(long maxAgeMs, long nowMs) {
+        addrStates.entrySet().removeIf(e -> {
+            PcbTrackState s = e.getValue();
+            long last = Math.max(s.lastTimeSeenMs, s.createdAtMs);
+            return nowMs - last > maxAgeMs;
+        });
+        prefixStates.entrySet().removeIf(e -> {
+            PcbTrackState s = e.getValue();
+            long last = Math.max(s.lastTimeSeenMs, s.createdAtMs);
+            return nowMs - last > maxAgeMs;
+        });
+    }
+
+    /* Removes all tracking state of the given torrent (e.g. after deletion). */
+    public void evictTorrent(String torrentId) {
+        String prefix = torrentId + "|";
+        addrStates.keySet().removeIf(k -> k.startsWith(prefix));
+        prefixStates.keySet().removeIf(k -> k.startsWith(prefix));
     }
 }

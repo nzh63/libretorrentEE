@@ -36,17 +36,17 @@ public class PbhSettingsTest {
         assertTrue(s.enabled);
         assertTrue(s.antiVampireEnabled);
         assertTrue(s.pcbEnabled);
-        assertTrue(s.clientNameBlacklistEnabled);
-        assertEquals(0, s.banDurationMs); // permanent
+        // Default ban duration is 30 days (upstream PeerBanHelper), not permanent.
+        assertEquals(30L * 24 * 60 * 60 * 1000, s.banDurationMs);
     }
 
     @Test
     public void immutableBlacklists() {
-        HashSet<String> src = new HashSet<>(Arrays.asList("a", "b"));
-        PbhSettings s = PbhSettings.builder().clientNameBlacklist(src).build();
+        HashSet<String> src = new HashSet<>(Arrays.asList("1.2.3.4", "10.0.0.0/8"));
+        PbhSettings s = PbhSettings.builder().ipCidrBlacklist(src).build();
         src.clear(); // mutating the source must not affect the settings
-        assertEquals(2, s.clientNameBlacklist.size());
-        assertTrue(s.clientNameBlacklist.contains("a"));
+        assertEquals(2, s.ipCidrBlacklist.size());
+        assertTrue(s.ipCidrBlacklist.contains("10.0.0.0/8"));
     }
 
     @Test
@@ -55,9 +55,11 @@ public class PbhSettingsTest {
                 .enabled(false)
                 .pcbMaximumDifference(0.5)
                 .antiVampireUploadThreshold(999)
+                .banDurationMs(0) // explicit permanent
                 .build();
         assertFalse(s.enabled);
         assertEquals(0.5, s.pcbMaximumDifference, 1e-9);
         assertEquals(999, s.antiVampireUploadThreshold);
+        assertEquals(0, s.banDurationMs);
     }
 }

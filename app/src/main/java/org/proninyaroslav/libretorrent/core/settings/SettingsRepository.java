@@ -502,11 +502,6 @@ public interface SettingsRepository
 
     void pbhAntiVampireMinProgressPpm(long val);
 
-    /* Client name blacklist */
-    boolean pbhClientNameBlacklistEnabled();
-
-    void pbhClientNameBlacklistEnabled(boolean val);
-
     /* Progress Cheat Blocker */
     boolean pbhPcbEnabled();
 

@@ -25,6 +25,8 @@ import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ProgressCheatModuleTest {
@@ -33,11 +35,11 @@ public class ProgressCheatModuleTest {
     private final long size = 100L * 1024 * 1024; /* 100 MiB */
 
     private PeerSnapshot peer(String ip, long uploaded, int progressPpm, int upSpeed) {
-        return new PeerSnapshot(ip, 6881, "client", uploaded, 0, progressPpm, upSpeed);
+        return new PeerSnapshot(ip, 6881, "client", uploaded, 0, progressPpm, upSpeed, 0);
     }
 
     private TorrentSnapshot torrent() {
-        return new TorrentSnapshot("t1", "Torrent", size, 0, Collections.emptyList());
+        return new TorrentSnapshot("t1", "Torrent", size, 0, false, Collections.emptyList());
     }
 
     private PbhSettings defaultSettings() {
@@ -142,7 +144,7 @@ public class ProgressCheatModuleTest {
     @Test
     public void smallTorrent_passes() {
         // Torrent smaller than the minimum size: skip difference checks.
-        TorrentSnapshot small = new TorrentSnapshot("t1", "small", 1024, 0, Collections.emptyList());
+        TorrentSnapshot small = new TorrentSnapshot("t1", "small", 1024, 0, false, Collections.emptyList());
         PeerSnapshot p = peer("8.8.8.8", 512, 0, 100);
         assertFalse(module.check(small, p, defaultSettings()).shouldBan());
     }
@@ -163,5 +165,58 @@ public class ProgressCheatModuleTest {
     public void loopbackOrInvalidIp_passes() {
         PeerSnapshot p = peer("127.0.0.1", (long) (size * 1.5), 0, 100);
         assertFalse(module.check(torrent(), p, defaultSettings()).shouldBan());
+    }
+
+    @Test
+    public void incompleteTorrent_excessiveUpload_banned() {
+        /*
+         * We have completed 50 MiB of the 100 MiB torrent but uploaded
+         * 65 MiB to the peer: below the torrent-size threshold (120 MiB)
+         * yet above the completed-size threshold (60 MiB) -> the
+         * incomplete-task branch must catch it.
+         */
+        TorrentSnapshot halfDone = new TorrentSnapshot("t1", "Torrent",
+                size, size / 2, false, Collections.emptyList());
+        PeerSnapshot p = peer("8.8.8.8", size * 65 / 100, 0, 100);
+        BanResult r = module.check(halfDone, p, defaultSettings());
+        assertTrue(r.shouldBan());
+        assertTrue(r.reason.contains("incomplete task"));
+    }
+
+    @Test
+    public void incompleteTorrent_normalUpload_passes() {
+        TorrentSnapshot halfDone = new TorrentSnapshot("t1", "Torrent",
+                size, size / 2, false, Collections.emptyList());
+        PeerSnapshot p = peer("8.8.8.8", size * 55 / 100, 600_000, 100);
+        assertFalse(module.check(halfDone, p, defaultSettings()).shouldBan());
+    }
+
+    @Test
+    public void evictStale_dropsOnlyOldEntries() {
+        module.check(torrent(), peer("8.8.8.8", 1000, 500_000, 100), defaultSettings());
+        assertTrue(module.addrStateCount() > 0);
+
+        // Fresh entries survive
+        module.evictStale(60_000L, System.currentTimeMillis());
+        assertEquals(1, module.addrStateCount());
+
+        // Entries older than the TTL are dropped
+        module.evictStale(60_000L, System.currentTimeMillis() + 120_000L);
+        assertEquals(0, module.addrStateCount());
+        assertEquals(0, module.prefixStateCount());
+    }
+
+    @Test
+    public void evictTorrent_dropsThatTorrentOnly() {
+        module.check(torrent(), peer("8.8.8.8", 1000, 500_000, 100), defaultSettings());
+        TorrentSnapshot other = new TorrentSnapshot("t2", "T", size, 0, false,
+                Collections.emptyList());
+        module.check(other, peer("9.9.9.9", 1000, 500_000, 100), defaultSettings());
+        assertEquals(2, module.addrStateCount());
+
+        module.evictTorrent("t1");
+        assertEquals(1, module.addrStateCount());
+        assertNull(module.getAddrState("t1", "8.8.8.8"));
+        assertNotNull(module.getAddrState("t2", "9.9.9.9"));
     }
 }

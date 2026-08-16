@@ -20,6 +20,7 @@
 package org.proninyaroslav.libretorrent.core.pbh;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,19 +40,29 @@ import java.util.Set;
 public class PeerBanHelperEngine {
     private final List<BanModule> modules;
     private final BtnRuleModule btnRuleModule;
+    @Nullable
+    private final ProgressCheatModule progressCheatModule;
 
     public PeerBanHelperEngine() {
         this.btnRuleModule = new BtnRuleModule();
+        this.progressCheatModule = new ProgressCheatModule();
         this.modules = new ArrayList<>();
-        this.modules.add(new ProgressCheatModule());
+        this.modules.add(progressCheatModule);
         this.modules.add(new AntiVampireModule());
-        this.modules.add(new ClientNameBlacklistModule());
         this.modules.add(new IpAddressBlacklistModule());
         this.modules.add(btnRuleModule);
     }
 
     public PeerBanHelperEngine(List<BanModule> modules) {
         this.btnRuleModule = new BtnRuleModule();
+        ProgressCheatModule pcb = null;
+        for (BanModule m : modules) {
+            if (m instanceof ProgressCheatModule) {
+                pcb = (ProgressCheatModule) m;
+                break;
+            }
+        }
+        this.progressCheatModule = pcb;
         this.modules = new ArrayList<>(modules);
     }
 
@@ -68,10 +79,37 @@ public class PeerBanHelperEngine {
         return btnRuleModule;
     }
 
+    /* The ProgressCheatBlocker module, or null if not configured. */
+    @Nullable
+    public ProgressCheatModule getProgressCheatModule() {
+        return progressCheatModule;
+    }
+
     /*
-     * Run all modules against every torrent/peer. Returns the set of peer IPs
-     * to ban (in insertion order). If the master switch is off, returns an
-     * empty set. BAN_FOR_DISCONNECT results are included as short bans.
+     * Evicts ProgressCheatBlocker tracking state that has not been updated
+     * for longer than maxAgeMs, so the state maps cannot grow without bound.
+     * No-op when no PCB module is configured.
+     */
+    public void evictStaleState(long maxAgeMs, long nowMs) {
+        if (progressCheatModule != null)
+            progressCheatModule.evictStale(maxAgeMs, nowMs);
+    }
+
+    /*
+     * Drops all ProgressCheatBlocker tracking state of the given torrent
+     * (e.g. after the torrent was deleted).
+     */
+    public void evictTorrentState(String torrentId) {
+        if (progressCheatModule != null)
+            progressCheatModule.evictTorrent(torrentId);
+    }
+
+    /*
+     * Run all modules against every torrent/peer. Returns the set of ban
+     * decisions (in insertion order), each tagged with the torrent it
+     * belongs to. If the master switch is off, returns an empty set.
+     * BAN_FOR_DISCONNECT results are temporary probes and must be handled
+     * separately from real bans by the caller.
      */
     @NonNull
     public List<BanResult> evaluate(@NonNull List<TorrentSnapshot> torrents,
@@ -87,7 +125,7 @@ public class PeerBanHelperEngine {
                 for (BanModule module : modules) {
                     BanResult result = module.check(torrent, peer, settings);
                     if (result.shouldBan())
-                        results.add(result);
+                        results.add(result.withTorrentId(torrent.id));
                 }
             }
         }

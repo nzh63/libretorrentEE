@@ -93,6 +93,8 @@ public final class BtnPayload {
             o.addProperty("peer_last_flags", s.peerLastFlags == null ? "" : s.peerLastFlags);
             o.addProperty("download_speed", s.downloadSpeed);
             o.addProperty("upload_speed", s.uploadSpeed);
+            o.addProperty("download_speed_max", s.downloadSpeedMax);
+            o.addProperty("upload_speed_max", s.uploadSpeedMax);
             arr.add(o);
         }
         root.add("swarms", arr);
@@ -141,5 +143,7 @@ public final class BtnPayload {
         public String peerLastFlags;
         public long downloadSpeed;
         public long uploadSpeed;
+        public long downloadSpeedMax;
+        public long uploadSpeedMax;
     }
 }

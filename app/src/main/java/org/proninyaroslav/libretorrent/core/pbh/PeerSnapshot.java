@@ -41,6 +41,8 @@ public class PeerSnapshot {
     public final int progressPpm;
     /* Current upload speed in bytes/s */
     public final int upSpeed;
+    /* Current download speed in bytes/s */
+    public final int downSpeed;
 
     public PeerSnapshot(@NonNull String ip,
                         int port,
@@ -48,7 +50,8 @@ public class PeerSnapshot {
                         long totalUpload,
                         long totalDownload,
                         int progressPpm,
-                        int upSpeed) {
+                        int upSpeed,
+                        int downSpeed) {
         this.ip = Objects.requireNonNull(ip);
         this.port = port;
         this.client = client == null ? "" : client;
@@ -56,6 +59,7 @@ public class PeerSnapshot {
         this.totalDownload = totalDownload;
         this.progressPpm = progressPpm;
         this.upSpeed = upSpeed;
+        this.downSpeed = downSpeed;
     }
 
     /* Peer's reported progress as a fraction in [0, 1] */
@@ -79,13 +83,14 @@ public class PeerSnapshot {
                 && totalDownload == that.totalDownload
                 && progressPpm == that.progressPpm
                 && upSpeed == that.upSpeed
+                && downSpeed == that.downSpeed
                 && ip.equals(that.ip)
                 && client.equals(that.client);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ip, port, client, totalUpload, totalDownload, progressPpm, upSpeed);
+        return Objects.hash(ip, port, client, totalUpload, totalDownload, progressPpm, upSpeed, downSpeed);
     }
 
     @Override
@@ -96,6 +101,7 @@ public class PeerSnapshot {
                 ", totalUpload=" + totalUpload +
                 ", totalDownload=" + totalDownload +
                 ", progressPpm=" + progressPpm +
-                ", upSpeed=" + upSpeed + '}';
+                ", upSpeed=" + upSpeed +
+                ", downSpeed=" + downSpeed + '}';
     }
 }

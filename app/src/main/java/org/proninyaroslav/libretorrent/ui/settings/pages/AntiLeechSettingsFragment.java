@@ -43,6 +43,7 @@ import org.libtorrent4j.swig.error_code;
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.core.RepositoryHelper;
 import org.proninyaroslav.libretorrent.core.model.TorrentEngine;
+import org.proninyaroslav.libretorrent.core.pbh.IpUtils;
 import org.proninyaroslav.libretorrent.core.settings.SettingsRepository;
 import org.proninyaroslav.libretorrent.core.utils.Utils;
 import org.proninyaroslav.libretorrent.databinding.FragmentAntiLeechBinding;
@@ -274,7 +275,15 @@ public class AntiLeechSettingsFragment extends Fragment
         reloadList();
     }
 
+    /*
+     * Accepts both bare IPs and CIDR blocks ("1.2.3.0/24"): the engine and
+     * the session IP filter support both forms.
+     */
     private boolean isValidIp(String ip) {
+        if (ip == null || ip.isEmpty())
+            return false;
+        if (ip.contains("/"))
+            return IpUtils.matchesCidrSyntax(ip);
         error_code ec = new error_code();
         address.from_string(ip, ec);
 

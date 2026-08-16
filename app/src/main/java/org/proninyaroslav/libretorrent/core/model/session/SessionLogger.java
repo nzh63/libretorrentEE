@@ -32,7 +32,8 @@ import org.proninyaroslav.libretorrent.core.logger.LogFilter;
 import org.proninyaroslav.libretorrent.core.logger.Logger;
 
 public class SessionLogger extends Logger {
-    private static int nextLogEntryId = 0;
+    private static final java.util.concurrent.atomic.AtomicInteger nextLogEntryId =
+            new java.util.concurrent.atomic.AtomicInteger(0);
 
     public enum SessionLogEntryType {
         /*
@@ -125,14 +126,14 @@ public class SessionLogger extends Logger {
         LogEntry entry = null;
 
         switch (alert.type()) {
-            case LOG -> entry = new LogEntry(nextLogEntryId++,
+            case LOG -> entry = new LogEntry(nextLogEntryId.getAndIncrement(),
                     SessionLogEntryType.SESSION_LOG.name(),
                     ((LogAlert) alert).logMessage(),
                     time);
             case DHT_LOG -> {
                 DhtLogAlert dhtLogAlert = (DhtLogAlert) alert;
                 msg = "[" + dhtLogAlert.module().name() + "] " + dhtLogAlert.logMessage();
-                entry = new LogEntry(nextLogEntryId++,
+                entry = new LogEntry(nextLogEntryId.getAndIncrement(),
                         SessionLogEntryType.DHT_LOG.name(),
                         msg,
                         time);
@@ -144,7 +145,7 @@ public class SessionLogger extends Logger {
                         "[" + peerLogAlert.eventType() + "] " +
                         peerLogAlert.logMessage();
 
-                entry = new LogEntry(nextLogEntryId++,
+                entry = new LogEntry(nextLogEntryId.getAndIncrement(),
                         SessionLogEntryType.PEER_LOG.name(),
                         msg,
                         time);
@@ -152,12 +153,12 @@ public class SessionLogger extends Logger {
             case PORTMAP_LOG -> {
                 PortmapLogAlert portmapLogAlert = (PortmapLogAlert) alert;
                 msg = "[" + portmapLogAlert.mapType().name() + "] " + portmapLogAlert.logMessage();
-                entry = new LogEntry(nextLogEntryId++,
+                entry = new LogEntry(nextLogEntryId.getAndIncrement(),
                         SessionLogEntryType.PORTMAP_LOG.name(),
                         msg,
                         time);
             }
-            case TORRENT_LOG -> entry = new LogEntry(nextLogEntryId++,
+            case TORRENT_LOG -> entry = new LogEntry(nextLogEntryId.getAndIncrement(),
                     SessionLogEntryType.TORRENT_LOG.name(),
                     ((TorrentLogAlert) alert).logMessage(),
                     time);
@@ -173,7 +174,7 @@ public class SessionLogger extends Logger {
      * PBH_LOG tag, so it shows up in the log page under its own filter.
      */
     public void logPbh(@NonNull String msg) {
-        send(new LogEntry(nextLogEntryId++,
+        send(new LogEntry(nextLogEntryId.getAndIncrement(),
                 SessionLogEntryType.PBH_LOG.name(),
                 msg,
                 System.currentTimeMillis()));

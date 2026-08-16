@@ -111,11 +111,11 @@ public class SettingsRepositoryImpl implements SettingsRepository {
         /* PeerBanHelper-compatible anti-leech defaults */
         static final boolean pbhEnabled = true;
         static final int pbhCheckInterval = 2; /* s */
-        static final long pbhBanDuration = 0; /* ms; 0 = permanent */
+        /* 30 days, matching upstream PeerBanHelper; 0 = permanent */
+        static final long pbhBanDuration = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_BAN_DURATION_MS;
         static final boolean pbhAntiVampireEnabled = true;
         static final long pbhAntiVampireUploadThreshold = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_ANTI_VAMPIRE_UPLOAD_THRESHOLD;
         static final long pbhAntiVampireMinProgressPpm = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_ANTI_VAMPIRE_MIN_PROGRESS_PPM;
-        static final boolean pbhClientNameBlacklistEnabled = true;
         static final boolean pbhPcbEnabled = true;
         static final long pbhPcbTorrentMinimumSize = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_TORRENT_MINIMUM_SIZE;
         static final boolean pbhPcbBlockExcessiveClients = true;
@@ -931,19 +931,6 @@ public class SettingsRepositoryImpl implements SettingsRepository {
     public void pbhAntiVampireMinProgressPpm(long val) {
         pref.edit()
                 .putLong(appContext.getString(R.string.pref_key_pbh_anti_vampire_min_progress_ppm), val)
-                .apply();
-    }
-
-    @Override
-    public boolean pbhClientNameBlacklistEnabled() {
-        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_client_name_blacklist_enabled),
-                Default.pbhClientNameBlacklistEnabled);
-    }
-
-    @Override
-    public void pbhClientNameBlacklistEnabled(boolean val) {
-        pref.edit()
-                .putBoolean(appContext.getString(R.string.pref_key_pbh_client_name_blacklist_enabled), val)
                 .apply();
     }
 

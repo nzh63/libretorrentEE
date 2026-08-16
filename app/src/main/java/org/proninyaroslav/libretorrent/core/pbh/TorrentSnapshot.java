@@ -36,6 +36,8 @@ public class TorrentSnapshot {
     public final long totalSize;
     /* Bytes downloaded so far by us */
     public final long completedSize;
+    /* Whether the torrent is private (affects BTN reporting) */
+    public final boolean privateTorrent;
     /* Currently connected peers */
     public final List<PeerSnapshot> peers;
 
@@ -43,11 +45,13 @@ public class TorrentSnapshot {
                            @NonNull String name,
                            long totalSize,
                            long completedSize,
+                           boolean privateTorrent,
                            @NonNull List<PeerSnapshot> peers) {
         this.id = Objects.requireNonNull(id);
         this.name = name == null ? id : name;
         this.totalSize = totalSize;
         this.completedSize = completedSize;
+        this.privateTorrent = privateTorrent;
         this.peers = Objects.requireNonNull(peers);
     }
 

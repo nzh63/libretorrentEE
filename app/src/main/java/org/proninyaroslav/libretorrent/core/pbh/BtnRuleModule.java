@@ -27,9 +27,18 @@ import org.proninyaroslav.libretorrent.core.btn.BtnRuleSet;
  * Bans peers whose IP matches a BTN denylist rule and exempts peers that
  * match the BTN allowlist. The rule set is supplied by the BTN client and is
  * refreshed periodically.
+ *
+ * CIDR lists are compiled once per rule-set update; client-name rules apply
+ * their BTN match method (STARTS_WITH / ENDS_WITH / CONTAINS / EQUALS /
+ * REGEX / LENGTH).
  */
 public class BtnRuleModule implements BanModule {
     private volatile BtnRuleSet rules = BtnRuleSet.EMPTY;
+    /* Derived from `rules` on update; safe to read without a lock */
+    private volatile IpUtils.CidrMatcher denylistMatcher =
+            IpUtils.CidrMatcher.compile(java.util.Collections.emptySet());
+    private volatile IpUtils.CidrMatcher allowlistMatcher =
+            IpUtils.CidrMatcher.compile(java.util.Collections.emptySet());
 
     @NonNull
     @Override
@@ -39,6 +48,8 @@ public class BtnRuleModule implements BanModule {
 
     public void setRules(@NonNull BtnRuleSet rules) {
         this.rules = rules;
+        this.denylistMatcher = IpUtils.CidrMatcher.compile(rules.ipDenylist);
+        this.allowlistMatcher = IpUtils.CidrMatcher.compile(rules.ipAllowlist);
     }
 
     @NonNull
@@ -56,22 +67,20 @@ public class BtnRuleModule implements BanModule {
             return BanResult.pass(name(), peer.ip);
 
         // Allowlist always wins: exempted peers are never banned.
-        if (!r.ipAllowlist.isEmpty() &&
-                org.proninyaroslav.libretorrent.core.pbh.IpUtils.matchesAnyCidr(peer.ip, r.ipAllowlist)) {
+        if (!allowlistMatcher.isEmpty() && allowlistMatcher.matches(peer.ip)) {
             return BanResult.pass(name(), peer.ip);
         }
 
-        if (!r.ipDenylist.isEmpty() &&
-                org.proninyaroslav.libretorrent.core.pbh.IpUtils.matchesAnyCidr(peer.ip, r.ipDenylist)) {
+        if (!denylistMatcher.isEmpty() && denylistMatcher.matches(peer.ip)) {
             return BanResult.ban(name(), peer.ip, "IP matches a BTN denylist rule");
         }
 
-        if (!r.clientNamePatterns.isEmpty()) {
-            String clientLower = peer.client.toLowerCase(java.util.Locale.ROOT);
-            for (String pattern : r.clientNamePatterns) {
-                if (pattern != null && !pattern.isEmpty() && clientLower.contains(pattern)) {
+        if (!r.clientNameRules.isEmpty()) {
+            for (BtnRuleSet.ClientNameRule rule : r.clientNameRules) {
+                if (rule.matches(peer.client)) {
                     return BanResult.ban(name(), peer.ip,
-                            "client name matches a BTN peer-identity rule");
+                            "client name matches a BTN peer-identity rule ("
+                                    + rule.method + ")");
                 }
             }
         }

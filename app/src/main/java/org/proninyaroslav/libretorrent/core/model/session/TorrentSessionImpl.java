@@ -761,7 +761,10 @@ public class TorrentSessionImpl extends SessionManager
             if (ip == null)
                 continue;
             try {
-                IPFilterImpl.addBlockedIp(filter, ip);
+                if (ip.contains("/"))
+                    IPFilterImpl.addBlockedCidr(filter, ip);
+                else
+                    IPFilterImpl.addBlockedIp(filter, ip);
             } catch (IPFilterException e) {
                 Log.e(TAG, "Unable to ban IP " + ip + ": " + e.getMessage());
             }

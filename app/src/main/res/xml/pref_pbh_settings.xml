@@ -49,12 +49,6 @@
             android:inputType="number" />
 
         <org.proninyaroslav.libretorrent.ui.settings.customprefs.SwitchBarPreference
-            android:key="@string/pref_key_pbh_client_name_blacklist_enabled"
-            android:persistent="false"
-            android:summary="@string/pref_pbh_client_name_blacklist_summary"
-            android:title="@string/pref_pbh_client_name_blacklist_title" />
-
-        <org.proninyaroslav.libretorrent.ui.settings.customprefs.SwitchBarPreference
             android:key="@string/pref_key_pbh_pcb_enabled"
             android:persistent="false"
             android:summary="@string/pref_pbh_pcb_summary"

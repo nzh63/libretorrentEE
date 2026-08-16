@@ -30,12 +30,20 @@ public class BanResult {
     public final String peerIp;
     /* Null for PASS */
     public final String reason;
+    /* Id of the torrent the peer belonged to when the check ran; set by the
+     * engine so callers can attribute the ban without re-searching snapshots */
+    public final String torrentId;
 
     private BanResult(Action action, String module, String peerIp, String reason) {
+        this(action, module, peerIp, reason, null);
+    }
+
+    private BanResult(Action action, String module, String peerIp, String reason, String torrentId) {
         this.action = action;
         this.module = module;
         this.peerIp = peerIp;
         this.reason = reason;
+        this.torrentId = torrentId;
     }
 
     public static BanResult pass(String module, String peerIp) {
@@ -50,6 +58,11 @@ public class BanResult {
         return new BanResult(Action.BAN_FOR_DISCONNECT, module, peerIp, reason);
     }
 
+    /* Returns a copy of this result tagged with the torrent it belongs to. */
+    public BanResult withTorrentId(String torrentId) {
+        return new BanResult(action, module, peerIp, reason, torrentId);
+    }
+
     public boolean shouldBan() {
         return action == Action.BAN || action == Action.BAN_FOR_DISCONNECT;
     }
@@ -59,6 +72,7 @@ public class BanResult {
         return "BanResult{action=" + action +
                 ", module='" + module + '\'' +
                 ", peerIp='" + peerIp + '\'' +
+                (torrentId == null ? "" : ", torrentId='" + torrentId + '\'') +
                 (reason == null ? "" : ", reason='" + reason + '\'') + '}';
     }
 }

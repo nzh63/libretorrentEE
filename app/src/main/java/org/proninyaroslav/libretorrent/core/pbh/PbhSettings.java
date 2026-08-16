@@ -48,11 +48,6 @@ public class PbhSettings {
     /* ...while it still reports a progress (PPM) below this value */
     public final long antiVampireMinProgressPpm;
 
-    /* ---- Client name blacklist (PBH "ClientNameBlacklist" module) ---- */
-    public final boolean clientNameBlacklistEnabled;
-    /* Substrings (case-insensitive) matched against the reported client name */
-    public final Set<String> clientNameBlacklist;
-
     /* ---- IP / CIDR blacklist (PBH "IPAddressBlocker" module) ---- */
     public final Set<String> ipCidrBlacklist;
 
@@ -77,7 +72,8 @@ public class PbhSettings {
     public final double pcbFastPcbTestPercentage;
     public final long pcbFastPcbTestBlockingDurationMs;
 
-    public static final long DEFAULT_BAN_DURATION_MS = 0; /* permanent */
+    /* 30 days, matching upstream PeerBanHelper's default; 0 still means permanent */
+    public static final long DEFAULT_BAN_DURATION_MS = 30L * 24 * 60 * 60 * 1000;
     public static final long DEFAULT_ANTI_VAMPIRE_UPLOAD_THRESHOLD = 50L * 1024 * 1024; /* 50 MiB */
     public static final long DEFAULT_ANTI_VAMPIRE_MIN_PROGRESS_PPM = 1000; /* 0.1 % */
     public static final long DEFAULT_PCB_TORRENT_MINIMUM_SIZE = 10L * 1024 * 1024; /* 10 MiB */
@@ -97,8 +93,6 @@ public class PbhSettings {
         this.antiVampireEnabled = b.antiVampireEnabled;
         this.antiVampireUploadThreshold = b.antiVampireUploadThreshold;
         this.antiVampireMinProgressPpm = b.antiVampireMinProgressPpm;
-        this.clientNameBlacklistEnabled = b.clientNameBlacklistEnabled;
-        this.clientNameBlacklist = immutableCopy(b.clientNameBlacklist);
         this.ipCidrBlacklist = immutableCopy(b.ipCidrBlacklist);
         this.pcbEnabled = b.pcbEnabled;
         this.pcbTorrentMinimumSize = b.pcbTorrentMinimumSize;
@@ -130,8 +124,6 @@ public class PbhSettings {
         private boolean antiVampireEnabled = true;
         private long antiVampireUploadThreshold = DEFAULT_ANTI_VAMPIRE_UPLOAD_THRESHOLD;
         private long antiVampireMinProgressPpm = DEFAULT_ANTI_VAMPIRE_MIN_PROGRESS_PPM;
-        private boolean clientNameBlacklistEnabled = true;
-        private Set<String> clientNameBlacklist = new HashSet<>();
         private Set<String> ipCidrBlacklist = new HashSet<>();
         private boolean pcbEnabled = true;
         private long pcbTorrentMinimumSize = DEFAULT_PCB_TORRENT_MINIMUM_SIZE;
@@ -151,8 +143,6 @@ public class PbhSettings {
         public Builder antiVampireEnabled(boolean v) { this.antiVampireEnabled = v; return this; }
         public Builder antiVampireUploadThreshold(long v) { this.antiVampireUploadThreshold = v; return this; }
         public Builder antiVampireMinProgressPpm(long v) { this.antiVampireMinProgressPpm = v; return this; }
-        public Builder clientNameBlacklistEnabled(boolean v) { this.clientNameBlacklistEnabled = v; return this; }
-        public Builder clientNameBlacklist(Set<String> v) { this.clientNameBlacklist = v; return this; }
         public Builder ipCidrBlacklist(Set<String> v) { this.ipCidrBlacklist = v; return this; }
         public Builder pcbEnabled(boolean v) { this.pcbEnabled = v; return this; }
         public Builder pcbTorrentMinimumSize(long v) { this.pcbTorrentMinimumSize = v; return this; }

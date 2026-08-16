@@ -25,6 +25,7 @@ import org.libtorrent4j.swig.address;
 import org.libtorrent4j.swig.error_code;
 import org.libtorrent4j.swig.ip_filter;
 import org.proninyaroslav.libretorrent.core.exception.IPFilterException;
+import org.proninyaroslav.libretorrent.core.pbh.IpUtils;
 
 class IPFilterImpl implements IPFilter
 {
@@ -78,5 +79,29 @@ class IPFilterImpl implements IPFilter
             throw new IPFilterException("Invalid IP: " + ip);
 
         filter.add_rule(addr, addr, ip_filter.access_flags.blocked.swigValue());
+    }
+
+    /*
+     * Adds a rule blocking a whole CIDR block ("a.b.c.d/nn") to the given
+     * filter. A bare IP is equivalent to a full-length prefix.
+     */
+
+    static void addBlockedCidr(@NonNull ip_filter filter, @NonNull String cidr) throws IPFilterException
+    {
+        IpUtils.Cidr parsed = IpUtils.parseCidr(cidr);
+        if (parsed == null)
+            throw new IPFilterException("Invalid CIDR: " + cidr);
+
+        byte[] network = parsed.network;
+        byte[] rangeEnd = IpUtils.cidrRangeEnd(network, parsed.prefixLength);
+
+        error_code ecStart = new error_code();
+        error_code ecEnd = new error_code();
+        address start = address.from_string(IpUtils.formatIp(network), ecStart);
+        address end = address.from_string(IpUtils.formatIp(rangeEnd), ecEnd);
+        if (ecStart.value() > 0 || ecEnd.value() > 0)
+            throw new IPFilterException("Invalid CIDR: " + cidr);
+
+        filter.add_rule(start, end, ip_filter.access_flags.blocked.swigValue());
     }
 }

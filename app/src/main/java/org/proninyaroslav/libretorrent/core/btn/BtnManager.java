@@ -80,7 +80,8 @@ public class BtnManager {
 
         java.util.Set<String> denylist = new java.util.HashSet<>(base.ipDenylist);
         java.util.Set<String> allowlist = new java.util.HashSet<>(base.ipAllowlist);
-        java.util.Set<String> clientNames = new java.util.HashSet<>(base.clientNamePatterns);
+        java.util.List<BtnRuleSet.ClientNameRule> clientNames =
+                new java.util.ArrayList<>(base.clientNameRules);
         String denylistRev = base.denylistRev;
         String allowlistRev = base.allowlistRev;
         String peerIdentityRev = base.peerIdentityRev;
@@ -109,7 +110,7 @@ public class BtnManager {
         if (config.peerIdentityEndpoint != null && now - lastPeerIdentityFetchMs > config.peerIdentityInterval) {
             BtnRuleSet res = client.fetchPeerIdentityRules(settings, config, peerIdentityRev);
             if (res != null) {
-                clientNames = new java.util.HashSet<>(res.clientNamePatterns);
+                clientNames = new java.util.ArrayList<>(res.clientNameRules);
                 denylist.addAll(res.ipDenylist);
                 peerIdentityRev = res.peerIdentityRev;
                 lastPeerIdentityFetchMs = now;

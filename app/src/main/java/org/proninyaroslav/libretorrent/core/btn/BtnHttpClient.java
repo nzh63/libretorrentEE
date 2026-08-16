@@ -137,12 +137,14 @@ public class BtnHttpClient {
 
     /*
      * POSTs a gzip-compressed JSON body. Returns the HTTP status code, or -1
-     * on I/O error.
+     * on I/O error. Per HTTP semantics, 301/302/303 redirects after a POST
+     * are followed with a GET (without the body); 307/308 re-POST it.
      */
     public int postGzipJson(@NonNull String urlStr,
                             @NonNull BtnSettings settings,
                             @NonNull byte[] jsonBody) throws IOException {
         String current = urlStr;
+        boolean rePostBody = true;
         for (int redirects = 0; ; redirects++) {
             if (redirects > MAX_REDIRECTS)
                 return -1;
@@ -150,25 +152,29 @@ public class BtnHttpClient {
             conn.setInstanceFollowRedirects(false);
             conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(READ_TIMEOUT_MS);
-            conn.setRequestMethod("POST");
+            conn.setRequestMethod(rePostBody ? "POST" : "GET");
             applyAuthHeaders(conn, settings);
-            conn.setRequestProperty("Content-Encoding", "gzip");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-
-            byte[] gzipped = gzip(jsonBody);
-
-            int code;
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(gzipped);
-                os.flush();
+            if (rePostBody) {
+                conn.setRequestProperty("Content-Encoding", "gzip");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
             }
-            code = conn.getResponseCode();
+
+            if (rePostBody) {
+                byte[] gzipped = gzip(jsonBody);
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(gzipped);
+                    os.flush();
+                }
+            }
+            int code = conn.getResponseCode();
             if (isRedirect(code)) {
                 String location = conn.getHeaderField("Location");
                 conn.disconnect();
                 if (location == null)
                     return -1;
+                if (code != 307 && code != 308)
+                    rePostBody = false;
                 current = new URL(new URL(current), location).toString();
                 continue;
             }

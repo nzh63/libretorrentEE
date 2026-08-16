@@ -723,6 +723,21 @@ class TorrentDownloadImpl implements TorrentDownload {
     }
 
     @Override
+    public boolean isPrivate() {
+        if (!hasMetadata()) {
+            return false;
+        }
+
+        try {
+            TorrentInfo info = th.torrentFile();
+
+            return info != null && info.isPrivate();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
     public long getDownloadSpeed() {
         return operationNotAllowed() || isFinished() || isPaused() || isSeeding() ?
                 0 :

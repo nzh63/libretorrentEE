@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * anti-cheat logic depends on.
  */
 public class PcbTrackState {
+    /* When this state was created (epoch millis), for TTL eviction */
+    public final long createdAtMs = System.currentTimeMillis();
     /* Last progress reported by the peer (fraction 0..1); -1 = never reported */
     public volatile double lastReportProgress = -1.0d;
     /* Last upload value reported by the client for this peer */

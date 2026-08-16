@@ -24,8 +24,16 @@ import androidx.annotation.NonNull;
 /*
  * PBH "IPAddressBlocker" equivalent: bans a peer whose IP falls into any of
  * the configured CIDR blocks or exact IPs.
+ *
+ * The CIDR strings are compiled into byte-prefix form once per rule-set
+ * change and cached, so a scan over many peers does not re-parse the rule
+ * strings on every check.
  */
 public final class IpAddressBlacklistModule implements BanModule {
+    /* Guarded by this; only mutated when the rule set actually changed */
+    private java.util.Set<String> lastRules;
+    private IpUtils.CidrMatcher matcher = IpUtils.CidrMatcher.compile(java.util.Collections.emptySet());
+
     @NonNull
     @Override
     public String name() {
@@ -34,13 +42,21 @@ public final class IpAddressBlacklistModule implements BanModule {
 
     @NonNull
     @Override
-    public BanResult check(@NonNull TorrentSnapshot torrent,
-                           @NonNull PeerSnapshot peer,
-                           @NonNull PbhSettings settings) {
-        if (settings.ipCidrBlacklist == null || settings.ipCidrBlacklist.isEmpty())
+    public synchronized BanResult check(@NonNull TorrentSnapshot torrent,
+                                        @NonNull PeerSnapshot peer,
+                                        @NonNull PbhSettings settings) {
+        java.util.Set<String> rules = settings.ipCidrBlacklist;
+        if (rules == null || rules.isEmpty()) {
+            lastRules = null;
+            matcher = IpUtils.CidrMatcher.compile(java.util.Collections.emptySet());
             return BanResult.pass(name(), peer.ip);
+        }
+        if (!rules.equals(lastRules)) {
+            lastRules = new java.util.HashSet<>(rules);
+            matcher = IpUtils.CidrMatcher.compile(rules);
+        }
 
-        if (IpUtils.matchesAnyCidr(peer.ip, settings.ipCidrBlacklist)) {
+        if (matcher.matches(peer.ip)) {
             return BanResult.ban(name(), peer.ip,
                     "IP address matches a blacklisted CIDR block");
         }

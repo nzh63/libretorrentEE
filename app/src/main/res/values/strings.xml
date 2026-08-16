@@ -298,7 +298,7 @@
         torrents are running.</string>
     <string name="pref_pbh_check_interval_title">Check interval, s</string>
     <string name="pref_pbh_ban_duration_title">Ban duration, ms</string>
-    <string name="pref_pbh_ban_duration_summary">How long a banned peer stays banned. 0 = permanent
+    <string name="pref_pbh_ban_duration_summary">How long a banned peer stays banned, in milliseconds (default 2592000000 = 30 days). 0 = permanent
         until removed manually.</string>
     <string name="pref_pbh_anti_vampire_title">AntiVampire</string>
     <string name="pref_pbh_anti_vampire_summary">Ban peers that receive a lot of data but never

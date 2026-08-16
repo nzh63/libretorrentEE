@@ -22,9 +22,14 @@ package org.proninyaroslav.libretorrent.core.pbh;
 import androidx.annotation.NonNull;
 
 /*
- * PBH "AntiVampire" equivalent: bans a peer that we have uploaded a large
+ * Behavior-based leech detection: bans a peer that we have uploaded a large
  * amount of data to, but which still reports (nearly) zero progress. Such a
- * peer is a typical leech / "vampire" that never returns pieces.
+ * peer is a typical leech that never returns pieces.
+ *
+ * Note: despite the name, upstream PeerBanHelper's "AntiVampire" module is a
+ * Xunlei string-preset (peerId "-xl" / client name "xunlei"). This fork
+ * implements a behavior check instead, because libtorrent4j does not expose
+ * peer IDs; use the user-agent blacklist to reproduce the preset.
  */
 public final class AntiVampireModule implements BanModule {
     @NonNull

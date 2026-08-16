@@ -145,4 +145,50 @@ public class IpUtilsTest {
                 IpUtils.toBitSet(IpUtils.parseIp("10.0.0.1")).toByteArray(),
                 IpUtils.toBitSet(IpUtils.parseIp("10.0.0.1")).toByteArray());
     }
+
+    @Test
+    public void parseIp_acceptsIpv4MappedIpv6() {
+        // libtorrent reports this form on some networks; it must parse to the
+        // same 4 bytes as the plain dotted form.
+        assertArrayEquals(IpUtils.parseIp("1.2.3.4"), IpUtils.parseIp("::ffff:1.2.3.4"));
+    }
+
+    @Test
+    public void normalizeIp_mappedAndPlainFormsShareIdentity() {
+        assertEquals("1.2.3.4", IpUtils.normalizeIp("::ffff:1.2.3.4"));
+        assertEquals("1.2.3.4", IpUtils.normalizeIp("1.2.3.4"));
+        assertEquals("1.2.3.4", IpUtils.normalizeIp("tcp://1.2.3.4:6881"));
+        // IPv6 forms all canonicalise to the same (expanded) string
+        assertEquals(IpUtils.normalizeIp("2001:db8::1"),
+                IpUtils.normalizeIp("utp://[2001:db8::1]:6881"));
+        assertEquals(IpUtils.normalizeIp("2001:db8:0:0:0:0:0:1"),
+                IpUtils.normalizeIp("2001:db8::1"));
+    }
+
+    @Test
+    public void cidrMatcher_matchesCompiledEntries() {
+        IpUtils.CidrMatcher matcher = IpUtils.CidrMatcher.compile(java.util.Arrays.asList(
+                "10.0.0.0/8", "192.168.1.5", "2001:db8::/32", "garbage", ""));
+        assertTrue(matcher.matches("10.1.2.3"));
+        assertTrue(matcher.matches("192.168.1.5"));
+        assertFalse(matcher.matches("192.168.1.6"));
+        assertTrue(matcher.matches("2001:db8::dead:beef"));
+        assertFalse(matcher.matches("2001:db9::1"));
+        assertFalse(matcher.matches("not-an-ip"));
+        // Mapped form must match a plain v4 rule
+        assertTrue(matcher.matches("::ffff:10.2.3.4"));
+        assertFalse(IpUtils.CidrMatcher.compile(java.util.Collections.emptySet()).matches("10.0.0.1"));
+    }
+
+    @Test
+    public void cidrRangeEnd_coversWholeBlock() {
+        assertArrayEquals(IpUtils.parseIp("10.0.0.255"),
+                IpUtils.cidrRangeEnd(IpUtils.parseIp("10.0.0.0"), 24));
+        assertArrayEquals(IpUtils.parseIp("10.0.255.255"),
+                IpUtils.cidrRangeEnd(IpUtils.parseIp("10.0.0.0"), 16));
+        assertArrayEquals(IpUtils.parseIp("1.2.3.4"),
+                IpUtils.cidrRangeEnd(IpUtils.parseIp("1.2.3.4"), 32));
+        assertArrayEquals(IpUtils.parseIp("255.255.255.255"),
+                IpUtils.cidrRangeEnd(IpUtils.parseIp("0.0.0.0"), 0));
+    }
 }

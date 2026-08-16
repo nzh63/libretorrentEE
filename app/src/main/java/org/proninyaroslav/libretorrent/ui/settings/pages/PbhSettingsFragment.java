@@ -79,7 +79,6 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
 
         bindSwitch(R.string.pref_key_pbh_enabled, pref.pbhEnabled());
         bindSwitch(R.string.pref_key_pbh_anti_vampire_enabled, pref.pbhAntiVampireEnabled());
-        bindSwitch(R.string.pref_key_pbh_client_name_blacklist_enabled, pref.pbhClientNameBlacklistEnabled());
         bindSwitch(R.string.pref_key_pbh_pcb_enabled, pref.pbhPcbEnabled());
         bindSwitch(R.string.pref_key_pbh_pcb_block_excessive_clients, pref.pbhPcbBlockExcessiveClients());
 
@@ -177,8 +176,6 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
             pref.pbhEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_pbh_anti_vampire_enabled))) {
             pref.pbhAntiVampireEnabled((boolean) newValue);
-        } else if (key.equals(getString(R.string.pref_key_pbh_client_name_blacklist_enabled))) {
-            pref.pbhClientNameBlacklistEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_pbh_pcb_enabled))) {
             pref.pbhPcbEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_pbh_pcb_block_excessive_clients))) {

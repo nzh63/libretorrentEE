@@ -20,6 +20,7 @@
 package org.proninyaroslav.libretorrent.core.btn;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -29,7 +30,6 @@ import com.google.gson.JsonParser;
 import org.proninyaroslav.libretorrent.core.pbh.IpUtils;
 
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,7 +46,8 @@ import java.util.Set;
  *  }
  *
  * We extract:
- *  - client-name patterns (STARTS_WITH / CONTAINS rules) -> ban by client name;
+ *  - client-name rules with their match method
+ *    (STARTS_WITH / ENDS_WITH / CONTAINS / EQUALS / REGEX / LENGTH);
  *  - IP CIDR blocks -> ban by IP.
  * peer_id rules are ignored because libtorrent4j does not expose peer_id.
  */
@@ -56,13 +57,13 @@ public final class BtnPeerIdentityParser {
 
     /*
      * Parses the JSON body and returns a BtnRuleSet holding the extracted IP
-     * denylist and client-name patterns. The returned rev is taken from the
+     * denylist and client-name rules. The returned rev is taken from the
      * top-level "version" field.
      */
     @NonNull
     public static BtnRuleSet parse(@NonNull String body) {
         Set<String> ips = new HashSet<>();
-        Set<String> clientNames = new HashSet<>();
+        Set<BtnRuleSet.ClientNameRule> clientNames = new HashSet<>();
         String rev = "";
 
         JsonElement root;
@@ -86,7 +87,8 @@ public final class BtnPeerIdentityParser {
             collectClientNameRules(obj.getAsJsonObject("client_name"), clientNames);
         }
 
-        return new BtnRuleSet(ips, new HashSet<>(), clientNames, "", "", rev);
+        return new BtnRuleSet(ips, new HashSet<>(),
+                new java.util.ArrayList<>(clientNames), "", "", rev);
     }
 
     private static void collectIpRules(JsonObject ipObj, Set<String> out) {
@@ -104,7 +106,8 @@ public final class BtnPeerIdentityParser {
         }
     }
 
-    private static void collectClientNameRules(JsonObject cnObj, Set<String> out) {
+    private static void collectClientNameRules(JsonObject cnObj,
+                                               Set<BtnRuleSet.ClientNameRule> out) {
         for (Map.Entry<String, JsonElement> e : cnObj.entrySet()) {
             JsonElement value = e.getValue();
             if (!value.isJsonArray())
@@ -112,30 +115,67 @@ public final class BtnPeerIdentityParser {
             for (JsonElement item : value.getAsJsonArray()) {
                 if (!item.isJsonPrimitive())
                     continue;
-                String ruleJson = item.getAsString();
-                String content = extractRuleContent(ruleJson);
-                if (content != null && !content.isEmpty())
-                    out.add(content.toLowerCase(Locale.ROOT));
+                BtnRuleSet.ClientNameRule rule =
+                        parseRule(item.getAsString());
+                if (rule != null)
+                    out.add(rule);
             }
         }
     }
 
     /*
      * Rules are embedded as JSON strings like
-     * "{\"method\":\"STARTS_WITH\",\"content\":\"xm/torrent\"}".
-     * Extract the "content" value, or return null if unparseable.
+     * "{\"method\":\"STARTS_WITH\",\"content\":\"xm/torrent\"}". Returns a
+     * typed rule (method + content), or null if no content can be extracted.
      */
-    @org.jetbrains.annotations.Nullable
-    private static String extractRuleContent(String ruleJson) {
+    @Nullable
+    private static BtnRuleSet.ClientNameRule parseRule(String ruleJson) {
+        String methodStr = null;
+        String content = null;
         try {
             JsonElement rule = JsonParser.parseString(ruleJson);
-            if (rule.isJsonObject() && rule.getAsJsonObject().has("content")
-                    && rule.getAsJsonObject().get("content").isJsonPrimitive()) {
-                return rule.getAsJsonObject().get("content").getAsString();
+            if (rule.isJsonObject()) {
+                JsonObject o = rule.getAsJsonObject();
+                if (o.has("method") && o.get("method").isJsonPrimitive())
+                    methodStr = o.get("method").getAsString();
+                if (o.has("content") && o.get("content").isJsonPrimitive())
+                    content = o.get("content").getAsString();
             }
         } catch (Exception ignored) {
         }
-        // Fallback: search for a "content" field with a simple regex.
+        if (content == null || content.isEmpty()) {
+            content = extractContentFallback(ruleJson);
+            if (content == null || content.isEmpty())
+                return null;
+        }
+
+        BtnRuleSet.ClientNameRule.Method method =
+                parseMethod(methodStr);
+        if (method == null) {
+            /* Unknown method: fall back to containment so the rule still
+             * contributes, mirroring the pre-method behaviour */
+            method = BtnRuleSet.ClientNameRule.Method.CONTAINS;
+        }
+        return new BtnRuleSet.ClientNameRule(method, content);
+    }
+
+    @Nullable
+    private static BtnRuleSet.ClientNameRule.Method parseMethod(@Nullable String methodStr) {
+        if (methodStr == null)
+            return null;
+        for (BtnRuleSet.ClientNameRule.Method m : BtnRuleSet.ClientNameRule.Method.values()) {
+            if (m.name().equalsIgnoreCase(methodStr.trim()))
+                return m;
+        }
+        return null;
+    }
+
+    /*
+     * Fallback: search for a "content" field with a simple scan, for rule
+     * strings whose JSON is malformed but still carries a content value.
+     */
+    @Nullable
+    private static String extractContentFallback(String ruleJson) {
         int idx = ruleJson.indexOf("\"content\"");
         if (idx < 0)
             return null;

@@ -30,12 +30,12 @@ import static org.junit.Assert.assertTrue;
 
 public class BtnRuleModuleTest {
     private final BtnRuleModule module = new BtnRuleModule();
-    private final TorrentSnapshot torrent = new TorrentSnapshot("t1", "T", 1000, 0,
+    private final TorrentSnapshot torrent = new TorrentSnapshot("t1", "T", 1000, 0, false,
             Collections.emptyList());
     private final PbhSettings settings = PbhSettings.builder().build();
 
     private PeerSnapshot peer(String ip, String client) {
-        return new PeerSnapshot(ip, 6881, client, 0, 0, 0, 0);
+        return new PeerSnapshot(ip, 6881, client, 0, 0, 0, 0, 0);
     }
 
     @Test
@@ -48,7 +48,7 @@ public class BtnRuleModuleTest {
     public void denylistMatch_banned() {
         module.setRules(new BtnRuleSet(
                 Collections.singleton("10.0.0.0/8"), Collections.emptySet(),
-                Collections.emptySet(), "r1", "", ""));
+                Collections.emptyList(), "r1", "", ""));
         assertTrue(module.check(torrent, peer("10.1.2.3", "client"), settings).shouldBan());
         assertFalse(module.check(torrent, peer("8.8.8.8", "client"), settings).shouldBan());
     }
@@ -57,7 +57,7 @@ public class BtnRuleModuleTest {
     public void allowlistOverridesDenylist() {
         module.setRules(new BtnRuleSet(
                 Collections.singleton("10.0.0.0/8"), Collections.singleton("10.1.2.3"),
-                Collections.emptySet(), "r1", "r2", ""));
+                Collections.emptyList(), "r1", "r2", ""));
         // 10.1.2.3 is in both allowlist and denylist -> allowlist wins.
         assertFalse(module.check(torrent, peer("10.1.2.3", "client"), settings).shouldBan());
         // 10.9.9.9 only in denylist -> banned.
@@ -65,11 +65,27 @@ public class BtnRuleModuleTest {
     }
 
     @Test
-    public void clientNamePatternMatch_banned() {
+    public void clientNameRuleMatch_banned_byMethod() {
+        // STARTS_WITH only matches at the beginning, unlike the old
+        // contains-everything behaviour.
         module.setRules(new BtnRuleSet(
                 Collections.emptySet(), Collections.emptySet(),
-                Collections.singleton("gopeed"), "", "", "r1"));
+                Collections.singletonList(new BtnRuleSet.ClientNameRule(
+                        BtnRuleSet.ClientNameRule.Method.STARTS_WITH, "gopeed")),
+                "", "", "r1"));
         assertTrue(module.check(torrent, peer("1.2.3.4", "gopeed dev"), settings).shouldBan());
+        assertFalse(module.check(torrent, peer("1.2.3.4", "fake gopeed clone"), settings).shouldBan());
         assertFalse(module.check(torrent, peer("1.2.3.4", "qBittorrent"), settings).shouldBan());
+    }
+
+    @Test
+    public void clientNameRegexRule_banned() {
+        module.setRules(new BtnRuleSet(
+                Collections.emptySet(), Collections.emptySet(),
+                Collections.singletonList(new BtnRuleSet.ClientNameRule(
+                        BtnRuleSet.ClientNameRule.Method.REGEX, "^xl.*")),
+                "", "", "r1"));
+        assertTrue(module.check(torrent, peer("1.2.3.4", "xl0019"), settings).shouldBan());
+        assertFalse(module.check(torrent, peer("1.2.3.4", "qBittorrent 4.6"), settings).shouldBan());
     }
 }

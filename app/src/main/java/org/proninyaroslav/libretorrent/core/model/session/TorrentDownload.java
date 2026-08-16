@@ -69,6 +69,10 @@ public interface TorrentDownload
 
     long getSize();
 
+    /* Whether the torrent is marked private (tracker-only, no DHT/PEX) */
+
+    boolean isPrivate();
+
     long getDownloadSpeed();
 
     long getUploadSpeed();

@@ -75,8 +75,17 @@ public final class IpUtils {
                 return null;
             try {
                 InetAddress addr = InetAddress.getByName(s);
-                if (addr.getAddress().length == 16)
-                    return addr.getAddress();
+                byte[] bytes = addr.getAddress();
+                if (bytes.length == 16)
+                    return bytes;
+                /*
+                 * Java collapses IPv4-mapped literals ("::ffff:1.2.3.4") into a
+                 * 4-byte Inet4Address. Return those 4 bytes so that a mapped
+                 * form and the plain dotted form parse to the same value
+                 * (libtorrent reports the mapped form on some networks).
+                 */
+                if (bytes.length == 4 && addr instanceof Inet4Address)
+                    return bytes;
                 return null;
             } catch (Exception e) {
                 return null;
@@ -84,6 +93,33 @@ public final class IpUtils {
         }
 
         return null;
+    }
+
+    /*
+     * Canonical form of a peer IP string: strips the transport prefix/port
+     * (see stripPort) and normalises IPv4-mapped IPv6 literals to the plain
+     * dotted IPv4 form, so "1.2.3.4" and "::ffff:1.2.3.4" share one identity.
+     */
+    @NonNull
+    public static String normalizeIp(@NonNull String ip) {
+        String stripped = stripPort(ip);
+        byte[] bytes = parseIp(stripped);
+        if (bytes == null)
+            return stripped;
+        if (bytes.length == 16 && isIpv4Mapped(bytes))
+            return formatIp(java.util.Arrays.copyOfRange(bytes, 12, 16));
+        return formatIp(bytes);
+    }
+
+    /* Whether a 16-byte address is an IPv4-mapped (::/96 prefix) address. */
+    public static boolean isIpv4Mapped(@NonNull byte[] ipBytes) {
+        if (ipBytes.length != 16)
+            return false;
+        for (int i = 0; i < 10; i++) {
+            if (ipBytes[i] != 0)
+                return false;
+        }
+        return ipBytes[10] == (byte) 0xFF && ipBytes[11] == (byte) 0xFF;
     }
 
     /*
@@ -312,5 +348,117 @@ public final class IpUtils {
             }
         }
         return bs;
+    }
+
+    /*
+     * Computes the last address of a CIDR block (all host bits set to 1).
+     * Returns the network address itself if the prefix covers the whole
+     * address. prefixLength must be in [0, ipBytes.length * 8].
+     */
+    @NonNull
+    public static byte[] cidrRangeEnd(@NonNull byte[] network, int prefixLength) {
+        int maxBits = network.length * 8;
+        if (prefixLength < 0)
+            prefixLength = 0;
+        if (prefixLength > maxBits)
+            prefixLength = maxBits;
+
+        byte[] out = network.clone();
+        int fullBytes = prefixLength / 8;
+        int remainingBits = prefixLength % 8;
+        for (int i = fullBytes + 1; i < out.length; i++)
+            out[i] = (byte) 0xFF;
+        if (remainingBits > 0 && fullBytes < out.length) {
+            int hostMask = 0xFF >>> remainingBits;
+            out[fullBytes] = (byte) (out[fullBytes] | hostMask);
+        } else if (fullBytes < out.length) {
+            out[fullBytes] = (byte) (out[fullBytes] | 0xFF);
+        }
+        return out;
+    }
+
+    /*
+     * A parsed CIDR entry: network bytes plus prefix length.
+     */
+    public static final class Cidr {
+        @NonNull
+        public final byte[] network;
+        public final int prefixLength;
+
+        public Cidr(@NonNull byte[] network, int prefixLength) {
+            this.network = network;
+            this.prefixLength = prefixLength;
+        }
+    }
+
+    /*
+     * Parses a CIDR entry ("1.2.3.0/24", "2001:db8::/32" or a bare IP) into
+     * its network bytes and prefix length. Returns null if invalid.
+     */
+    @Nullable
+    public static Cidr parseCidr(@NonNull String cidr) {
+        String[] parts = cidr.trim().split("/");
+        byte[] network = parseIp(parts[0].trim());
+        if (network == null)
+            return null;
+        int prefixLength;
+        if (parts.length == 1) {
+            prefixLength = network.length * 8;
+        } else {
+            try {
+                prefixLength = Integer.parseInt(parts[1].trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+            if (prefixLength < 0 || prefixLength > network.length * 8)
+                return null;
+        }
+        return new Cidr(network, prefixLength);
+    }
+
+    /*
+     * A CIDR list pre-parsed into byte arrays, so that matching a peer does
+     * not re-parse the rule strings on every check. Safe for concurrent use.
+     */
+    public static final class CidrMatcher {
+        private final Cidr[] cidrs;
+
+        private CidrMatcher(Cidr[] cidrs) {
+            this.cidrs = cidrs;
+        }
+
+        @NonNull
+        public static CidrMatcher compile(@NonNull Iterable<String> cidrs) {
+            java.util.List<Cidr> parsed = new java.util.ArrayList<>();
+            for (String cidr : cidrs) {
+                if (cidr == null || cidr.trim().isEmpty())
+                    continue;
+                Cidr c = parseCidr(cidr);
+                if (c != null)
+                    parsed.add(c);
+            }
+            return new CidrMatcher(parsed.toArray(new Cidr[0]));
+        }
+
+        public boolean isEmpty() {
+            return cidrs.length == 0;
+        }
+
+        public boolean matches(@NonNull String ip) {
+            byte[] ipBytes = parseIp(ip);
+            if (ipBytes == null)
+                return false;
+            return matches(ipBytes);
+        }
+
+        public boolean matches(@NonNull byte[] ipBytes) {
+            for (Cidr c : cidrs) {
+                if (c.network.length != ipBytes.length)
+                    continue;
+                if (prefixMatches(ipBytes, c.network, c.prefixLength))
+                    return true;
+            }
+            return false;
+        }
     }
 }
