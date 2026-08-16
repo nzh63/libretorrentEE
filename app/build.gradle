@@ -22,10 +22,10 @@ android {
         // Version code format: 0000xx0
         // xx - version code
         // trailing zero - auto increment for split ABI
-        versionCode 9000351
+        versionCode 9000352
         // Version format: major.minor.[revision][-some_info]
         // EE suffix is incremented for each fork release of the same upstream version
-        versionName '4.1.1-ee1'
+        versionName '4.1.1-ee2'
         vectorDrawables.useSupportLibrary = true
 
         ndk {

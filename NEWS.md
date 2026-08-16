@@ -1,3 +1,27 @@
+### Version 4.1.1-ee2 (2026-08-17)
+
+**LibreTorrentEE fork release** — anti-leech engine hardening:
+
+* Bugfixes:
+    - fast-PCB probe no longer permanently bans peers; probes now disconnect
+      for the configured short duration and auto-expire
+    - Progress-cheat tracking state no longer leaks memory (TTL eviction,
+      cleanup on torrent deletion)
+    - Peer scans run on a dedicated background thread; BTN network calls no
+      longer stall detection
+    - Added the missing incomplete-torrent excessive-download check (PCB)
+    - Manually banned IPs are never auto-unbanned by expiry bookkeeping
+* Improved:
+    - BTN peer-identity rules honour their match method (STARTS_WITH, ENDS_WITH,
+      CONTAINS, EQUALS, REGEX, LENGTH) instead of substring-only matching
+    - IP/CIDR rules are pre-parsed, greatly reducing scan CPU usage
+    - CIDR blocks can be added in the blacklist UI and are applied to the
+      session IP filter
+    - IPv4-mapped IPv6 addresses are normalised to one identity
+    - BTN swarm reports include real first/last-seen, traffic offsets, speed
+      maxima and the private-torrent flag
+    - Default auto-ban duration changed from permanent to 30 days
+
 ### Version 4.1.1-ee1 (2026-08-16)
 
 **LibreTorrentEE fork release** on top of upstream 4.1.1:

@@ -1,0 +1,11 @@
+* Bugfixes:
+    - fast-PCB probe no longer permanently bans peers (short disconnect, auto-expires)
+    - Progress-cheat state no longer leaks memory
+    - Scans and BTN network calls run off the detection path
+    - Added missing incomplete-torrent excessive-download check
+    - Manually banned IPs are never auto-unbanned
+* Improved:
+    - BTN rules honour their match method (STARTS_WITH/REGEX/etc.)
+    - IP/CIDR rules pre-parsed (lower CPU); CIDR addable via UI
+    - IPv4-mapped IPv6 normalised; BTN swarm data quality improved
+    - Default auto-ban duration is now 30 days instead of permanent
