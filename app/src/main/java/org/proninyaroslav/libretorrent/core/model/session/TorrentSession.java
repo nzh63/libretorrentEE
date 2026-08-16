@@ -35,6 +35,7 @@ import org.proninyaroslav.libretorrent.core.settings.SessionSettings;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 public interface TorrentSession
 {
@@ -94,6 +95,20 @@ public interface TorrentSession
     void enableIpFilter(@NonNull Uri path);
 
     void disableIpFilter();
+
+    /*
+     * Bans (blocks) the given IPs at the session level. Already connected peers
+     * with these IPs are disconnected and all new connections are rejected.
+     */
+
+    void banIps(@NonNull Set<String> ips);
+
+    /*
+     * Replaces the whole set of banned IPs and re-applies the session IP
+     * filter. Use it when the blacklist was edited (e.g. to unban IPs).
+     */
+
+    void setBannedIps(@NonNull Set<String> ips);
 
     void pauseAll();
 

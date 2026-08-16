@@ -23,9 +23,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.PopupMenu;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -181,17 +185,59 @@ public class TorrentDetailsPeersFragment extends Fragment
     }
 
     @Override
-    public boolean onItemLongClick(@NonNull PeerItem item) {
-        sharePeerIp(item.ip);
+    public boolean onItemLongClick(@NonNull View view, @NonNull PeerItem item) {
+        showPeerContextMenu(view, item);
 
         return true;
     }
 
+    private void showPeerContextMenu(@NonNull View view, @NonNull PeerItem item) {
+        PopupMenu popup = new PopupMenu(activity, view);
+        MenuInflater inflater = popup.getMenuInflater();
+        inflater.inflate(R.menu.peer_context_menu, popup.getMenu());
+
+        /* A peer with an unknown (empty) user agent can't be banned by it */
+        boolean hasUserAgent = !TextUtils.isEmpty(item.client);
+        popup.getMenu().findItem(R.id.ban_user_agent_menu).setVisible(hasUserAgent);
+        popup.getMenu().findItem(R.id.ban_ip_and_user_agent_menu).setVisible(hasUserAgent);
+
+        popup.setOnMenuItemClickListener((menuItem) -> {
+            int itemId = menuItem.getItemId();
+            if (itemId == R.id.ban_ip_menu) {
+                viewModel.banPeerByIp(item.ip);
+                Toast.makeText(activity, R.string.peer_banned_by_ip, Toast.LENGTH_SHORT).show();
+
+                return true;
+
+            } else if (itemId == R.id.ban_user_agent_menu) {
+                viewModel.banPeerByUserAgent(item.client);
+                Toast.makeText(activity, R.string.peer_banned_by_user_agent, Toast.LENGTH_SHORT).show();
+
+                return true;
+
+            } else if (itemId == R.id.ban_ip_and_user_agent_menu) {
+                viewModel.banPeerByIp(item.ip);
+                viewModel.banPeerByUserAgent(item.client);
+                Toast.makeText(activity, R.string.peer_banned_by_ip_and_user_agent, Toast.LENGTH_SHORT).show();
+
+                return true;
+
+            } else if (itemId == R.id.share_ip_menu) {
+                sharePeerIp(item.ip);
+
+                return true;
+            }
+
+            return false;
+        });
+        popup.show();
+    }
+
     private void sharePeerIp(String ip) {
-        Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+        Intent sharingIntent = new Intent(Intent.ACTION_SEND);
         sharingIntent.setType("text/plain");
-        sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "ip");
-        sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, ip);
+        sharingIntent.putExtra(Intent.EXTRA_SUBJECT, "ip");
+        sharingIntent.putExtra(Intent.EXTRA_TEXT, ip);
 
         startActivity(Intent.createChooser(sharingIntent, getString(R.string.share_via)));
     }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="12dp"
+    android:minHeight="480dp">
+
+    <TextView
+        android:id="@android:id/title"
+        style="@style/App.Components.ListItem.Label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:text="Activity log" />
+
+    <TextView
+        android:id="@android:id/summary"
+        style="@style/App.Components.ListItem.SupportingText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:lineSpacingExtra="2dp"
+        tools:text="No activity yet." />
+</LinearLayout>

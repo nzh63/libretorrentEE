@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item android:id="@+id/ban_ip_menu"
+        app:showAsAction="never"
+        android:title="@string/ban_peer_ip" />
+
+    <item android:id="@+id/ban_user_agent_menu"
+        app:showAsAction="never"
+        android:title="@string/ban_peer_user_agent" />
+
+    <item android:id="@+id/ban_ip_and_user_agent_menu"
+        app:showAsAction="never"
+        android:title="@string/ban_peer_ip_and_user_agent" />
+
+    <item android:id="@+id/share_ip_menu"
+        app:showAsAction="never"
+        android:title="@string/share_peer_ip" />
+</menu>

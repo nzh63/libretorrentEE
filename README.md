@@ -1,31 +1,22 @@
 <div align="center">
 
 <p><img src="fastlane/metadata/android/en-US/images/icon.png" width="150"></p>
-<h2><b>LibreTorrent</b></h2>
-<h4>Copylefted libre full-featured torrent client for Android.</h4>
-
-[<img alt="Get it on F-Droid" height="80" src="https://tachibanagenerallaboratories.github.io/images/badges/F-Droid/get-it-on.png">](https://f-droid.org/app/org.proninyaroslav.libretorrent)
-[<img alt="Get it on OpenAPK" height="80" src="https://www.openapk.net/images/openapk-badge.png">](https://www.openapk.net/libretorrent/org.proninyaroslav.libretorrent/)
-[<img alt="Get it on APKMirror" height="80" src="https://raw.githubusercontent.com/proninyaroslav/TachibanaGeneralLaboratories.github.io/master/images/badges/APKMirror/get-it-on-apkmirror.png">](https://www.apkmirror.com/apk/proninyaroslav/libretorrent)
-[<img alt="Get it on Google Play" height="80" src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png">](https://play.google.com/store/apps/details?id=org.proninyaroslav.libretorrent)
-[<img alt="Get it on Aptoide" height="80" src="https://raw.githubusercontent.com/proninyaroslav/TachibanaGeneralLaboratories.github.io/master/images/badges/Aptoide/get-it-on-aptoide.png">](https://libretorrent.en.aptoide.com/app)
-[<img alt="Direct APK Download" height="80" src="https://tachibanagenerallaboratories.github.io/images/badges/Direct%20Download/direct-apk-download.png">](https://proninyaroslav.ru/mirror/libretorrent)
-
-> For direct download, you can verify the app with the SHA-256 fingerprint certificate: `B0:88:D4:72:A9:80:18:64:5C:DE:EF:8E:93:33:8D:58:B3:F2:38:92:18:7F:DF:63:F7:39:58:38:1E:27:E5:83`
-
-[![Hosted Weblate](https://hosted.weblate.org/widgets/libretorrent/-/svg-badge.svg)](https://hosted.weblate.org/engage/libretorrent/)
-[![Matrix Room](https://img.shields.io/matrix/libretorrent:matrix.org?label=Matrix%20Room)](https://matrix.to/#libretorrent:matrix.org)
-[![Chat - Telegram](https://img.shields.io/badge/chat-Telegram-blue.svg)](https://t.me/LibreTorrent)
-[<img alt="Coverity Scan Build Status" src="https://scan.coverity.com/projects/14421/badge.svg">](https://scan.coverity.com/projects/proninyaroslav-libretorrent)
-
-</div>
-
-**Issues**: https://gitlab.com/proninyaroslav/libretorrent/issues
-
-[Use, see, change and share](https://en.wikipedia.org/wiki/Free_software); [with all](https://en.wikipedia.org/wiki/Copyleft).
+<h2><b>LibreTorrentEE</b></h2>
+<h4>Copylefted libre full-featured torrent client for Android, with built-in anti-leech and BTN (BitTorrent Threat Network) support.</h4>
 
 
 ---
+
+## 🚀 About this fork
+
+**LibreTorrentEE** is a fork of [LibreTorrent](https://gitlab.com/proninyaroslav/libretorrent) that adds out-of-the-box **anti-leech protection** and **BTN (BitTorrent Threat Network)** integration. The goal is to protect your seeding ratio and bandwidth against vampires, progress-cheaters and other malicious peers, with **zero external setup** — everything runs inside the app on the device.
+
+Compared to upstream LibreTorrent, this edition adds:
+
+* 🛡️ **[PeerBanHelper](https://github.com/PBH-BTN/PeerBanHelper)-compatible anti-leech engine** (in-process, no external server needed)
+* 🌐 **[BTN](https://github.com/PBH-BTN/BTN-Spec) support** — share ban history and swarm data with the BTN community
+
+See the [Enhanced features](#-enhanced-features) section below for details.
 
 ## Screenshots
 
@@ -61,6 +52,34 @@
 * Supports proxy for trackers and peers
 * Based on [libtorrent4j](https://github.com/aldenml/libtorrent4j)
 * And more
+
+## ✨ Enhanced features
+
+### 🛡️ PeerBanHelper-compatible anti-leech engine
+
+A built-in, always-on detection engine that works **out of the box** — no external server or web API needed. It runs inside the app and inspects every connected peer every few seconds:
+
+* **Anti-Vampire** — bans peers that download large amounts from you while reporting no or negligible progress
+* **Progress-cheat detection (PCB)** — catches clients that report fake progress: ratio mismatch, progress rewinds, and excessive client counts
+* **Client-name blacklist** — bans peers whose client/user-agent matches a blacklist pattern
+* **IP / CIDR blacklist** — bans exact IPs or whole address ranges
+
+All detections are tunable from **Settings → Peer blacklist → PBH tab** (thresholds, ban duration, check interval, per-module toggles).
+
+### 🌐 BTN (BitTorrent Threat Network) support
+
+Implements the [BTN-Spec v2.0.1](https://github.com/PBH-BTN/BTN-Spec) (protocol version 20), connecting to the public Sparkle instance out of the box:
+
+* **Cloud rules** — automatically fetch the community-maintained IP deny/allow lists and peer-identity rules (refreshed on the server's schedule)
+* **Ban submission** — share your bans with the BTN network (opt-in, per-spec consent)
+* **Swarm submission** — publish anonymous, salted-hash anonymised swarm snapshots (opt-in)
+* **Anonymous login** — works with just an installation ID; or link an AppID/AppSecret to receive personalised rules
+
+Configure it under **Settings → Peer blacklist → BTN tab**. Everything is opt-in: no data leaves your device unless you enable the toggles.
+
+### 📊 Live activity log
+
+The **Settings → Peer blacklist → PBH tab** shows a live, scrollable log of every detection, ban, BTN rule refresh and submission — so you always know what the engine is doing and why a peer was banned.
 
 ## 🌍 Translations
 
@@ -110,3 +129,5 @@ Please see our [Privacy Policy](PRIVACY.md).
     GNU General Public License for more details.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+**LibreTorrentEE** is a fork of LibreTorrent. The anti-leech engine and BTN client are an original, in-process reimplementation of the [PeerBanHelper](https://github.com/PBH-BTN/PeerBanHelper) detection modules and the [BTN-Spec](https://github.com/PBH-BTN/BTN-Spec) protocol — independent code, protocol-compatible, and licensed under the same GPLv3 terms as the rest of this project.

@@ -19,6 +19,12 @@
         android:title="@string/pref_header_network" />
 
     <Preference
+        android:icon="@drawable/ic_lock_24px"
+        android:key="@string/pref_key_anti_leech_settings"
+        android:persistent="false"
+        android:title="@string/pref_header_anti_leech" />
+
+    <Preference
         android:icon="@drawable/ic_storage_24px"
         android:key="@string/pref_key_storage_settings"
         android:persistent="false"

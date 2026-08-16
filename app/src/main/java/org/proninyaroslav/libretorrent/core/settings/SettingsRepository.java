@@ -23,6 +23,8 @@ import android.content.SharedPreferences;
 
 import org.proninyaroslav.libretorrent.core.model.data.preferences.PrefTheme;
 
+import java.util.Set;
+
 import io.reactivex.rxjava3.core.Flowable;
 
 public interface SettingsRepository
@@ -186,6 +188,14 @@ public interface SettingsRepository
     String ipFilteringFile();
 
     void ipFilteringFile(String val);
+
+    Set<String> peerIpBlacklist();
+
+    void peerIpBlacklist(Set<String> val);
+
+    Set<String> peerUserAgentBlacklist();
+
+    void peerUserAgentBlacklist(Set<String> val);
 
     boolean showNatErrors();
 
@@ -419,6 +429,10 @@ public interface SettingsRepository
 
     void logSessionFilter(boolean val);
 
+    boolean logPbhFilter();
+
+    void logPbhFilter(boolean val);
+
     boolean logDhtFilter();
 
     void logDhtFilter(boolean val);
@@ -446,6 +460,129 @@ public interface SettingsRepository
     boolean askNotificationPermission();
 
     void askNotificationPermission(boolean val);
+
+    /*
+     * PeerBanHelper-compatible anti-leech settings
+     */
+
+    /* Master switch */
+    boolean pbhEnabled();
+
+    void pbhEnabled(boolean val);
+
+    /* How often (seconds) the anti-leech engine scans peers */
+    int pbhCheckInterval();
+
+    void pbhCheckInterval(int val);
+
+    /* Ban duration in ms; 0 = permanent */
+    long pbhBanDuration();
+
+    void pbhBanDuration(long val);
+
+    /*
+     * Auto-bans with their expiry time, stored as "ip=expiryMs" pairs.
+     * Only used when pbhBanDuration() > 0; permanent bans are not stored
+     * here and stay in the peer IP blacklist until removed manually.
+     */
+    Set<String> pbhAutoBannedIps();
+
+    void pbhAutoBannedIps(Set<String> val);
+
+    /* AntiVampire */
+    boolean pbhAntiVampireEnabled();
+
+    void pbhAntiVampireEnabled(boolean val);
+
+    long pbhAntiVampireUploadThreshold();
+
+    void pbhAntiVampireUploadThreshold(long val);
+
+    long pbhAntiVampireMinProgressPpm();
+
+    void pbhAntiVampireMinProgressPpm(long val);
+
+    /* Client name blacklist */
+    boolean pbhClientNameBlacklistEnabled();
+
+    void pbhClientNameBlacklistEnabled(boolean val);
+
+    /* Progress Cheat Blocker */
+    boolean pbhPcbEnabled();
+
+    void pbhPcbEnabled(boolean val);
+
+    long pbhPcbTorrentMinimumSize();
+
+    void pbhPcbTorrentMinimumSize(long val);
+
+    boolean pbhPcbBlockExcessiveClients();
+
+    void pbhPcbBlockExcessiveClients(boolean val);
+
+    double pbhPcbExcessiveThreshold();
+
+    void pbhPcbExcessiveThreshold(double val);
+
+    double pbhPcbMaximumDifference();
+
+    void pbhPcbMaximumDifference(double val);
+
+    double pbhPcbRewindMaximumDifference();
+
+    void pbhPcbRewindMaximumDifference(double val);
+
+    long pbhPcbBanDelayDuration();
+
+    void pbhPcbBanDelayDuration(long val);
+
+    int pbhPcbIpv4PrefixLength();
+
+    void pbhPcbIpv4PrefixLength(int val);
+
+    int pbhPcbIpv6PrefixLength();
+
+    void pbhPcbIpv6PrefixLength(int val);
+
+    double pbhPcbFastPcbTestPercentage();
+
+    void pbhPcbFastPcbTestPercentage(double val);
+
+    long pbhPcbFastPcbTestBlockingDuration();
+
+    void pbhPcbFastPcbTestBlockingDuration(long val);
+
+    /*
+     * BTN (BitTorrent Threat Network) settings
+     */
+
+    boolean btnEnabled();
+
+    void btnEnabled(boolean val);
+
+    String btnConfigUrl();
+
+    void btnConfigUrl(String val);
+
+    String btnAppId();
+
+    void btnAppId(String val);
+
+    String btnAppSecret();
+
+    void btnAppSecret(String val);
+
+    boolean btnSubmitBansEnabled();
+
+    void btnSubmitBansEnabled(boolean val);
+
+    boolean btnSubmitSwarmEnabled();
+
+    void btnSubmitSwarmEnabled(boolean val);
+
+    String btnInstallationId();
+
+    void btnInstallationId(String val);
 
     void registerOnSettingsChangeListener(SharedPreferences.OnSharedPreferenceChangeListener listener);
 

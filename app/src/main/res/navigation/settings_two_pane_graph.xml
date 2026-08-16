@@ -14,6 +14,9 @@
         android:id="@+id/action_network_settings"
         app:destination="@id/networkSettingsFragment" />
     <action
+        android:id="@+id/action_anti_leech_settings"
+        app:destination="@id/antiLeechSettingsFragment" />
+    <action
         android:id="@+id/action_storage_settings"
         app:destination="@id/storageSettingsFragment" />
     <action
@@ -56,6 +59,10 @@
             app:popEnterAnim="?attr/navPopEnterAnim"
             app:popExitAnim="?attr/navPopExitAnim" />
     </fragment>
+    <fragment
+        android:id="@+id/antiLeechSettingsFragment"
+        android:name="org.proninyaroslav.libretorrent.ui.settings.pages.AntiLeechSettingsFragment"
+        android:label="AntiLeechSettingsFragment" />
     <fragment
         android:id="@+id/proxySettingsFragment"
         android:name="org.proninyaroslav.libretorrent.ui.settings.pages.ProxySettingsFragment"

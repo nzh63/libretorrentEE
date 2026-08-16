@@ -30,6 +30,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /*
  * The static class for create and using BencodeFileTree objects.
@@ -39,6 +40,13 @@ import java.util.List;
 
 public class BencodeFileTreeUtils
 {
+    /*
+     * Path separator used inside torrent metadata is always POSIX ('/').
+     * On Windows File.separator is '\' and must not be used to split torrent
+     * paths. Split on both separators to be robust across platforms.
+     */
+    private static final Pattern PATH_SEPARATOR = Pattern.compile("[\\\\/]");
+
     /*
      * Returns tree and its files
      */
@@ -85,7 +93,7 @@ public class BencodeFileTreeUtils
                 parentTree = root;
             }
 
-            String[] nodes = path.split(File.separator);
+            String[] nodes = PATH_SEPARATOR.split(path);
             /*
              * Remove last node (file) from previous path.
              * Example:

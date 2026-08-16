@@ -25,6 +25,15 @@
             android:text="@string/journal_filter_session_log" />
 
         <CheckBox
+            android:id="@+id/pbh_log"
+            style="?attr/textAppearanceBodyLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:checked="@={viewModel.mutableParams.logPbhFilter}"
+            android:text="@string/journal_filter_pbh_log" />
+
+        <CheckBox
             android:id="@+id/dht_log"
             style="?attr/textAppearanceBodyLarge"
             android:layout_width="wrap_content"

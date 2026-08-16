@@ -65,4 +65,18 @@ class IPFilterImpl implements IPFilter
     {
         return filter;
     }
+
+    /*
+     * Adds a rule blocking a single IP to the given filter.
+     */
+
+    static void addBlockedIp(@NonNull ip_filter filter, @NonNull String ip) throws IPFilterException
+    {
+        error_code ec = new error_code();
+        address addr = address.from_string(ip, ec);
+        if (ec.value() > 0)
+            throw new IPFilterException("Invalid IP: " + ip);
+
+        filter.add_rule(addr, addr, ip_filter.access_flags.blocked.swigValue());
+    }
 }

@@ -66,6 +66,7 @@ import org.libtorrent4j.swig.string_vector;
 import org.libtorrent4j.swig.torrent_flags_t;
 import org.libtorrent4j.swig.torrent_handle;
 import org.proninyaroslav.libretorrent.core.exception.DecodeException;
+import org.proninyaroslav.libretorrent.core.exception.IPFilterException;
 import org.proninyaroslav.libretorrent.core.exception.TorrentAlreadyExistsException;
 import org.proninyaroslav.libretorrent.core.exception.UnknownUriException;
 import org.proninyaroslav.libretorrent.core.model.AddTorrentParams;
@@ -97,6 +98,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -155,6 +157,10 @@ public class TorrentSessionImpl extends SessionManager
     private boolean started;
     private final AtomicBoolean stopRequested;
     private Thread parseIpFilterThread;
+    /* IPs banned by the user or automatically, applied to the session IP filter */
+    private final Set<String> bannedIps = ConcurrentHashMap.newKeySet();
+    /* Rules from the configured IP filter file, if any */
+    private volatile ip_filter fileFilter;
 
     public TorrentSessionImpl(@NonNull TorrentRepository repo,
                               @NonNull FileSystemFacade fs,
@@ -694,8 +700,10 @@ public class TorrentSessionImpl extends SessionManager
             int ruleCount = new IPFilterParser().parseFile(path, fs, filter);
             if (Thread.interrupted())
                 return;
-            if (ruleCount != 0 && swig() != null && !operationNotAllowed())
-                swig().set_ip_filter(filter.getFilter());
+            if (ruleCount != 0) {
+                fileFilter = filter.getFilter();
+                applyIpFilter();
+            }
 
             notifyListeners((listener) ->
                     listener.onIpFilterParsed(ruleCount));
@@ -711,7 +719,54 @@ public class TorrentSessionImpl extends SessionManager
         if (parseIpFilterThread != null && !parseIpFilterThread.isInterrupted())
             parseIpFilterThread.interrupt();
 
-        swig().set_ip_filter(new ip_filter());
+        fileFilter = null;
+        applyIpFilter();
+    }
+
+    @Override
+    public void banIps(@NonNull Set<String> ips) {
+        if (ips.isEmpty())
+            return;
+
+        bannedIps.addAll(ips);
+        if (operationNotAllowed())
+            return;
+
+        applyIpFilter();
+    }
+
+    @Override
+    public void setBannedIps(@NonNull Set<String> ips) {
+        bannedIps.clear();
+        bannedIps.addAll(ips);
+        if (operationNotAllowed())
+            return;
+
+        applyIpFilter();
+    }
+
+    /*
+     * Applies the effective IP filter, i.e. the rules from the configured IP
+     * filter file (if any) merged with all banned IPs. Updating the filter
+     * also disconnects already connected peers that are now blocked and
+     * prevents them from reconnecting.
+     */
+
+    private synchronized void applyIpFilter() {
+        if (operationNotAllowed())
+            return;
+
+        ip_filter filter = (fileFilter != null ? new ip_filter(fileFilter) : new ip_filter());
+        for (String ip : bannedIps) {
+            if (ip == null)
+                continue;
+            try {
+                IPFilterImpl.addBlockedIp(filter, ip);
+            } catch (IPFilterException e) {
+                Log.e(TAG, "Unable to ban IP " + ip + ": " + e.getMessage());
+            }
+        }
+        swig().set_ip_filter(filter);
     }
 
     @Override
@@ -1337,6 +1392,7 @@ public class TorrentSessionImpl extends SessionManager
         disposables.add(Completable.fromRunnable(() ->
                         sessionLogger.applyFilterParams(new SessionLogger.SessionFilterParams(
                                 settings.logSessionFilter,
+                                settings.logPbhFilter,
                                 settings.logDhtFilter,
                                 settings.logPeerFilter,
                                 settings.logPortmapFilter,
@@ -1347,6 +1403,14 @@ public class TorrentSessionImpl extends SessionManager
     }
 
     private TorrentDownload newTask(TorrentHandle th, String id) {
+        /*
+         * Make sure the session IP filter (including manually banned IPs)
+         * applies to this torrent. Without this flag, updating the filter
+         * doesn't disconnect already connected filtered peers and doesn't
+         * prevent reconnections for torrents restored from old resume data.
+         */
+        th.setFlags(TorrentFlags.APPLY_IP_FILTER, TorrentFlags.APPLY_IP_FILTER);
+
         TorrentDownload task = new TorrentDownloadImpl(this, repo, fs, listeners,
                 id, th, settings.autoManaged);
         task.setMaxConnections(settings.connectionsLimitPerTorrent);

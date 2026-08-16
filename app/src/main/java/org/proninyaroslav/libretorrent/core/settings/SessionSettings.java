@@ -63,6 +63,7 @@ public class SessionSettings
     public static final boolean DEFAULT_LOGGING = BuildConfig.SESSION_LOGGING;
     public static final int DEFAULT_MAX_LOG_SIZE = 10000;
     public static final boolean DEFAULT_LOG_SESSION_FILTER = true;
+    public static final boolean DEFAULT_LOG_PBH_FILTER = true;
     public static final boolean DEFAULT_LOG_DHT_FILTER = false;
     public static final boolean DEFAULT_LOG_PEER_FILTER = false;
     public static final boolean DEFAULT_LOG_PORTMAP_FILTER = false;
@@ -106,6 +107,7 @@ public class SessionSettings
     public boolean logging = DEFAULT_LOGGING;
     public int maxLogSize = DEFAULT_MAX_LOG_SIZE;
     public boolean logSessionFilter = DEFAULT_LOG_SESSION_FILTER;
+    public boolean logPbhFilter = DEFAULT_LOG_PBH_FILTER;
     public boolean logDhtFilter = DEFAULT_LOG_DHT_FILTER;
     public boolean logPeerFilter = DEFAULT_LOG_PEER_FILTER;
     public boolean logPortmapFilter = DEFAULT_LOG_PORTMAP_FILTER;

@@ -457,6 +457,14 @@ public class TorrentDetailsViewModel extends ViewModel {
         engine.addTrackers(torrentId, urls);
     }
 
+    public void banPeerByIp(@NonNull String ip) {
+        engine.banPeerIp(ip);
+    }
+
+    public void banPeerByUserAgent(@NonNull String userAgent) {
+        engine.banPeerUserAgent(userAgent);
+    }
+
     public void pauseResumeTorrent() {
         engine.pauseResumeTorrent(torrentId);
     }

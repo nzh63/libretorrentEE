@@ -37,7 +37,13 @@ import java.util.Set;
 
 public class FileTree<F extends FileTree<?>> implements FileNode<FileTree<?>>, Serializable
 {
-    public static final String ROOT = File.separator;
+    /*
+     * Torrent-internal paths always use the POSIX separator ('/') regardless
+     * of the host OS. Using File.separator here would produce Windows ('\')
+     * paths and break parsing and tests.
+     */
+    public static final String SEPARATOR = "/";
+    public static final String ROOT = SEPARATOR;
     /* The name for pointer to the parent node */
     public static final String PARENT_DIR = "..";
 
@@ -176,7 +182,7 @@ public class FileTree<F extends FileTree<?>> implements FileNode<FileTree<?>>, S
         FileTree<?> curNode = this;
 
         while (curNode.parent != null) {
-            path.insert(0, curNode.name + File.separator);
+            path.insert(0, curNode.name + SEPARATOR);
             curNode = curNode.parent;
         }
 

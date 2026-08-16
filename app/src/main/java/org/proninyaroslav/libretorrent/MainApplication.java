@@ -38,6 +38,10 @@ import org.proninyaroslav.libretorrent.core.utils.Utils;
 import org.proninyaroslav.libretorrent.ui.TorrentNotifier;
 import org.proninyaroslav.libretorrent.ui.errorreport.ErrorReportActivity;
 
+import io.reactivex.rxjava3.exceptions.CompositeException;
+import io.reactivex.rxjava3.exceptions.UndeliverableException;
+import io.reactivex.rxjava3.plugins.RxJavaPlugins;
+
 public class MainApplication extends Application {
     public static final String TAG = MainApplication.class.getSimpleName();
 
@@ -52,6 +56,29 @@ public class MainApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        /*
+         * RxJava 3 routes errors that cannot be delivered to a disposed
+         * subscriber to a global handler. When a Room/DB query inside a
+         * Flowable is interrupted (e.g. the subscriber unsubscribes mid-query),
+         * the resulting InterruptedException surfaces as an UndeliverableException
+         * and, without a handler, reaches the uncaught-exception handler / ACRA
+         * as a spurious crash. Ignore it; these are expected during teardown.
+         */
+        RxJavaPlugins.setErrorHandler(throwable -> {
+            Throwable t = throwable;
+            if (t instanceof UndeliverableException)
+                t = t.getCause();
+            if (t instanceof InterruptedException)
+                return; // expected when a stream is disposed mid-query
+            if (t instanceof CompositeException) {
+                for (Throwable inner : ((CompositeException) t).getExceptions()) {
+                    if (inner instanceof InterruptedException)
+                        return;
+                }
+            }
+            Log.e(TAG, "Unhandled RxJava error: " + Log.getStackTraceString(throwable));
+        });
 
         CoreConfigurationBuilder builder = new CoreConfigurationBuilder();
         builder

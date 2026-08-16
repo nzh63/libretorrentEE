@@ -39,6 +39,8 @@ import org.proninyaroslav.libretorrent.core.system.SystemFacadeHelper;
 import org.proninyaroslav.libretorrent.core.utils.Utils;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
@@ -105,6 +107,32 @@ public class SettingsRepositoryImpl implements SettingsRepository {
         static final String ipFilteringFile = null;
         static final boolean showNatErrors = false;
         static final boolean validateHttpsTrackers = SessionSettings.DEFAULT_VALIDATE_HTTPS_TRACKERS;
+
+        /* PeerBanHelper-compatible anti-leech defaults */
+        static final boolean pbhEnabled = true;
+        static final int pbhCheckInterval = 2; /* s */
+        static final long pbhBanDuration = 0; /* ms; 0 = permanent */
+        static final boolean pbhAntiVampireEnabled = true;
+        static final long pbhAntiVampireUploadThreshold = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_ANTI_VAMPIRE_UPLOAD_THRESHOLD;
+        static final long pbhAntiVampireMinProgressPpm = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_ANTI_VAMPIRE_MIN_PROGRESS_PPM;
+        static final boolean pbhClientNameBlacklistEnabled = true;
+        static final boolean pbhPcbEnabled = true;
+        static final long pbhPcbTorrentMinimumSize = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_TORRENT_MINIMUM_SIZE;
+        static final boolean pbhPcbBlockExcessiveClients = true;
+        static final double pbhPcbExcessiveThreshold = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_EXCESSIVE_THRESHOLD;
+        static final double pbhPcbMaximumDifference = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_MAXIMUM_DIFFERENCE;
+        static final double pbhPcbRewindMaximumDifference = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_REWIND_MAXIMUM_DIFFERENCE;
+        static final long pbhPcbBanDelayDuration = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_BAN_DELAY_DURATION_MS;
+        static final int pbhPcbIpv4PrefixLength = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_IPV4_PREFIX_LENGTH;
+        static final int pbhPcbIpv6PrefixLength = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_IPV6_PREFIX_LENGTH;
+        static final double pbhPcbFastPcbTestPercentage = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_FAST_PCB_TEST_PERCENTAGE;
+        static final long pbhPcbFastPcbTestBlockingDuration = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_FAST_PCB_TEST_BLOCKING_DURATION_MS;
+
+        /* BTN defaults: off until the user opts in; config URL is pre-filled */
+        static final boolean btnEnabled = false;
+        static final boolean btnSubmitBansEnabled = false;
+        static final boolean btnSubmitSwarmEnabled = false;
+        static final String btnConfigUrl = "https://sparkle.pbh-btn.com/ping/config";
 
         /* Storage settings */
         static String saveTorrentsIn(@NonNull Context context) {
@@ -176,6 +204,7 @@ public class SettingsRepositoryImpl implements SettingsRepository {
         static final boolean logging = SessionSettings.DEFAULT_LOGGING;
         static final int maxLogSize = SessionSettings.DEFAULT_MAX_LOG_SIZE;
         static final boolean logSessionFilter = SessionSettings.DEFAULT_LOG_SESSION_FILTER;
+        static final boolean logPbhFilter = SessionSettings.DEFAULT_LOG_PBH_FILTER;
         static final boolean logDhtFilter = SessionSettings.DEFAULT_LOG_DHT_FILTER;
         static final boolean logPeerFilter = SessionSettings.DEFAULT_LOG_PEER_FILTER;
         static final boolean logPortmapFilter = SessionSettings.DEFAULT_LOG_PORTMAP_FILTER;
@@ -268,6 +297,7 @@ public class SettingsRepositoryImpl implements SettingsRepository {
         settings.logging = logging();
         settings.maxLogSize = maxLogSize();
         settings.logSessionFilter = logSessionFilter();
+        settings.logPbhFilter = logPbhFilter();
         settings.logDhtFilter = logDhtFilter();
         settings.logPeerFilter = logPeerFilter();
         settings.logPortmapFilter = logPortmapFilter();
@@ -758,6 +788,60 @@ public class SettingsRepositoryImpl implements SettingsRepository {
     }
 
     @Override
+    public Set<String> peerIpBlacklist() {
+        return new HashSet<>(pref.getStringSet(
+                appContext.getString(R.string.pref_key_peer_ip_blacklist),
+                new HashSet<>()
+        ));
+    }
+
+    @Override
+    public void peerIpBlacklist(Set<String> val) {
+        pref.edit()
+                .putStringSet(
+                        appContext.getString(R.string.pref_key_peer_ip_blacklist),
+                        new HashSet<>(val)
+                )
+                .apply();
+    }
+
+    @Override
+    public Set<String> peerUserAgentBlacklist() {
+        return new HashSet<>(pref.getStringSet(
+                appContext.getString(R.string.pref_key_peer_user_agent_blacklist),
+                new HashSet<>()
+        ));
+    }
+
+    @Override
+    public void peerUserAgentBlacklist(Set<String> val) {
+        pref.edit()
+                .putStringSet(
+                        appContext.getString(R.string.pref_key_peer_user_agent_blacklist),
+                        new HashSet<>(val)
+                )
+                .apply();
+    }
+
+    @Override
+    public Set<String> pbhAutoBannedIps() {
+        return new HashSet<>(pref.getStringSet(
+                appContext.getString(R.string.pref_key_pbh_auto_banned_ips),
+                new HashSet<>()
+        ));
+    }
+
+    @Override
+    public void pbhAutoBannedIps(Set<String> val) {
+        pref.edit()
+                .putStringSet(
+                        appContext.getString(R.string.pref_key_pbh_auto_banned_ips),
+                        new HashSet<>(val)
+                )
+                .apply();
+    }
+
+    @Override
     public boolean showNatErrors() {
         return pref.getBoolean(appContext.getString(R.string.pref_key_show_nat_errors),
                 Default.showNatErrors);
@@ -767,6 +851,332 @@ public class SettingsRepositoryImpl implements SettingsRepository {
     public void showNatErrors(boolean val) {
         pref.edit()
                 .putBoolean(appContext.getString(R.string.pref_key_show_nat_errors), val)
+                .apply();
+    }
+
+    /* ---- PeerBanHelper-compatible anti-leech settings ---- */
+
+    @Override
+    public boolean pbhEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_enabled),
+                Default.pbhEnabled);
+    }
+
+    @Override
+    public void pbhEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_pbh_enabled), val)
+                .apply();
+    }
+
+    @Override
+    public int pbhCheckInterval() {
+        return pref.getInt(appContext.getString(R.string.pref_key_pbh_check_interval),
+                Default.pbhCheckInterval);
+    }
+
+    @Override
+    public void pbhCheckInterval(int val) {
+        pref.edit()
+                .putInt(appContext.getString(R.string.pref_key_pbh_check_interval), val)
+                .apply();
+    }
+
+    @Override
+    public long pbhBanDuration() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_ban_duration),
+                Default.pbhBanDuration);
+    }
+
+    @Override
+    public void pbhBanDuration(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_ban_duration), val)
+                .apply();
+    }
+
+    @Override
+    public boolean pbhAntiVampireEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_anti_vampire_enabled),
+                Default.pbhAntiVampireEnabled);
+    }
+
+    @Override
+    public void pbhAntiVampireEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_pbh_anti_vampire_enabled), val)
+                .apply();
+    }
+
+    @Override
+    public long pbhAntiVampireUploadThreshold() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_anti_vampire_upload_threshold),
+                Default.pbhAntiVampireUploadThreshold);
+    }
+
+    @Override
+    public void pbhAntiVampireUploadThreshold(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_anti_vampire_upload_threshold), val)
+                .apply();
+    }
+
+    @Override
+    public long pbhAntiVampireMinProgressPpm() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_anti_vampire_min_progress_ppm),
+                Default.pbhAntiVampireMinProgressPpm);
+    }
+
+    @Override
+    public void pbhAntiVampireMinProgressPpm(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_anti_vampire_min_progress_ppm), val)
+                .apply();
+    }
+
+    @Override
+    public boolean pbhClientNameBlacklistEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_client_name_blacklist_enabled),
+                Default.pbhClientNameBlacklistEnabled);
+    }
+
+    @Override
+    public void pbhClientNameBlacklistEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_pbh_client_name_blacklist_enabled), val)
+                .apply();
+    }
+
+    @Override
+    public boolean pbhPcbEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_pcb_enabled),
+                Default.pbhPcbEnabled);
+    }
+
+    @Override
+    public void pbhPcbEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_pbh_pcb_enabled), val)
+                .apply();
+    }
+
+    @Override
+    public long pbhPcbTorrentMinimumSize() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_pcb_torrent_minimum_size),
+                Default.pbhPcbTorrentMinimumSize);
+    }
+
+    @Override
+    public void pbhPcbTorrentMinimumSize(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_pcb_torrent_minimum_size), val)
+                .apply();
+    }
+
+    @Override
+    public boolean pbhPcbBlockExcessiveClients() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_pcb_block_excessive_clients),
+                Default.pbhPcbBlockExcessiveClients);
+    }
+
+    @Override
+    public void pbhPcbBlockExcessiveClients(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_pbh_pcb_block_excessive_clients), val)
+                .apply();
+    }
+
+    @Override
+    public double pbhPcbExcessiveThreshold() {
+        return pref.getFloat(appContext.getString(R.string.pref_key_pbh_pcb_excessive_threshold),
+                (float) Default.pbhPcbExcessiveThreshold);
+    }
+
+    @Override
+    public void pbhPcbExcessiveThreshold(double val) {
+        pref.edit()
+                .putFloat(appContext.getString(R.string.pref_key_pbh_pcb_excessive_threshold), (float) val)
+                .apply();
+    }
+
+    @Override
+    public double pbhPcbMaximumDifference() {
+        return pref.getFloat(appContext.getString(R.string.pref_key_pbh_pcb_maximum_difference),
+                (float) Default.pbhPcbMaximumDifference);
+    }
+
+    @Override
+    public void pbhPcbMaximumDifference(double val) {
+        pref.edit()
+                .putFloat(appContext.getString(R.string.pref_key_pbh_pcb_maximum_difference), (float) val)
+                .apply();
+    }
+
+    @Override
+    public double pbhPcbRewindMaximumDifference() {
+        return pref.getFloat(appContext.getString(R.string.pref_key_pbh_pcb_rewind_maximum_difference),
+                (float) Default.pbhPcbRewindMaximumDifference);
+    }
+
+    @Override
+    public void pbhPcbRewindMaximumDifference(double val) {
+        pref.edit()
+                .putFloat(appContext.getString(R.string.pref_key_pbh_pcb_rewind_maximum_difference), (float) val)
+                .apply();
+    }
+
+    @Override
+    public long pbhPcbBanDelayDuration() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_pcb_ban_delay_duration),
+                Default.pbhPcbBanDelayDuration);
+    }
+
+    @Override
+    public void pbhPcbBanDelayDuration(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_pcb_ban_delay_duration), val)
+                .apply();
+    }
+
+    @Override
+    public int pbhPcbIpv4PrefixLength() {
+        return pref.getInt(appContext.getString(R.string.pref_key_pbh_pcb_ipv4_prefix_length),
+                Default.pbhPcbIpv4PrefixLength);
+    }
+
+    @Override
+    public void pbhPcbIpv4PrefixLength(int val) {
+        pref.edit()
+                .putInt(appContext.getString(R.string.pref_key_pbh_pcb_ipv4_prefix_length), val)
+                .apply();
+    }
+
+    @Override
+    public int pbhPcbIpv6PrefixLength() {
+        return pref.getInt(appContext.getString(R.string.pref_key_pbh_pcb_ipv6_prefix_length),
+                Default.pbhPcbIpv6PrefixLength);
+    }
+
+    @Override
+    public void pbhPcbIpv6PrefixLength(int val) {
+        pref.edit()
+                .putInt(appContext.getString(R.string.pref_key_pbh_pcb_ipv6_prefix_length), val)
+                .apply();
+    }
+
+    @Override
+    public double pbhPcbFastPcbTestPercentage() {
+        return pref.getFloat(appContext.getString(R.string.pref_key_pbh_pcb_fast_pcb_test_percentage),
+                (float) Default.pbhPcbFastPcbTestPercentage);
+    }
+
+    @Override
+    public void pbhPcbFastPcbTestPercentage(double val) {
+        pref.edit()
+                .putFloat(appContext.getString(R.string.pref_key_pbh_pcb_fast_pcb_test_percentage), (float) val)
+                .apply();
+    }
+
+    @Override
+    public long pbhPcbFastPcbTestBlockingDuration() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_pcb_fast_pcb_test_blocking_duration),
+                Default.pbhPcbFastPcbTestBlockingDuration);
+    }
+
+    @Override
+    public void pbhPcbFastPcbTestBlockingDuration(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_pcb_fast_pcb_test_blocking_duration), val)
+                .apply();
+    }
+
+    /* ---- BTN (BitTorrent Threat Network) settings ---- */
+
+    @Override
+    public boolean btnEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_btn_enabled),
+                Default.btnEnabled);
+    }
+
+    @Override
+    public void btnEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_btn_enabled), val)
+                .apply();
+    }
+
+    @Override
+    public String btnConfigUrl() {
+        return pref.getString(appContext.getString(R.string.pref_key_btn_config_url),
+                Default.btnConfigUrl);
+    }
+
+    @Override
+    public void btnConfigUrl(String val) {
+        pref.edit()
+                .putString(appContext.getString(R.string.pref_key_btn_config_url), val)
+                .apply();
+    }
+
+    @Override
+    public String btnAppId() {
+        return pref.getString(appContext.getString(R.string.pref_key_btn_app_id), "");
+    }
+
+    @Override
+    public void btnAppId(String val) {
+        pref.edit()
+                .putString(appContext.getString(R.string.pref_key_btn_app_id), val)
+                .apply();
+    }
+
+    @Override
+    public String btnAppSecret() {
+        return pref.getString(appContext.getString(R.string.pref_key_btn_app_secret), "");
+    }
+
+    @Override
+    public void btnAppSecret(String val) {
+        pref.edit()
+                .putString(appContext.getString(R.string.pref_key_btn_app_secret), val)
+                .apply();
+    }
+
+    @Override
+    public boolean btnSubmitBansEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_btn_submit_bans),
+                Default.btnSubmitBansEnabled);
+    }
+
+    @Override
+    public void btnSubmitBansEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_btn_submit_bans), val)
+                .apply();
+    }
+
+    @Override
+    public boolean btnSubmitSwarmEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_btn_submit_swarm),
+                Default.btnSubmitSwarmEnabled);
+    }
+
+    @Override
+    public void btnSubmitSwarmEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_btn_submit_swarm), val)
+                .apply();
+    }
+
+    @Override
+    public String btnInstallationId() {
+        return pref.getString(appContext.getString(R.string.pref_key_btn_installation_id), "");
+    }
+
+    @Override
+    public void btnInstallationId(String val) {
+        pref.edit()
+                .putString(appContext.getString(R.string.pref_key_btn_installation_id), val)
                 .apply();
     }
 
@@ -1417,6 +1827,19 @@ public class SettingsRepositoryImpl implements SettingsRepository {
     public void logSessionFilter(boolean val) {
         pref.edit()
                 .putBoolean(appContext.getString(R.string.pref_key_log_session_filter), val)
+                .apply();
+    }
+
+    @Override
+    public boolean logPbhFilter() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_log_pbh_filter),
+                Default.logPbhFilter);
+    }
+
+    @Override
+    public void logPbhFilter(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_log_pbh_filter), val)
                 .apply();
     }
 

@@ -37,6 +37,7 @@ import androidx.slidingpanelayout.widget.SlidingPaneLayout;
 
 import org.proninyaroslav.libretorrent.R;
 import org.proninyaroslav.libretorrent.databinding.FragmentSettingsHeaderBinding;
+import org.proninyaroslav.libretorrent.ui.settings.pages.AntiLeechSettingsFragmentDirections;
 import org.proninyaroslav.libretorrent.ui.settings.pages.AppearanceSettingsFragmentDirections;
 import org.proninyaroslav.libretorrent.ui.settings.pages.BehaviorSettingsFragmentDirections;
 import org.proninyaroslav.libretorrent.ui.settings.pages.FeedSettingsFragmentDirections;
@@ -135,6 +136,8 @@ public class SettingsFragment extends AbstractListDetailFragment {
             action = BehaviorSettingsFragmentDirections.actionBehaviorSettings();
         } else if (key.equals(getString(R.string.pref_key_network_settings))) {
             action = NetworkSettingsFragmentDirections.actionNetworkSettings();
+        } else if (key.equals(getString(R.string.pref_key_anti_leech_settings))) {
+            action = AntiLeechSettingsFragmentDirections.actionAntiLeechSettings();
         } else if (key.equals(getString(R.string.pref_key_storage_settings))) {
             action = StorageSettingsFragmentDirections.actionStorageSettings();
         } else if (key.equals(getString(R.string.pref_key_limitations_settings))) {

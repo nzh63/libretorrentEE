@@ -248,6 +248,50 @@
     <string name="peer_connection_type_web">Web</string>
     <string name="peer_connection_type_utp">μTP</string>
     <string name="peer_list_empty">Dieser Torrent ist noch mit keinem Peer verbunden</string>
+        <!-- PeerBanHelper anti-leech settings -->
+    <string name="pref_pbh_category">PeerBanHelper Anti-Leech</string>
+    <string name="pref_pbh_category_summary">Bösartige, schmarotzende und anomale Peers automatisch sperren. Kompatibel mit den Erkennungsregeln von PeerBanHelper. Funktioniert sofort.</string>
+    <string name="pref_pbh_enabled_title">Aktiviert</string>
+    <string name="pref_pbh_enabled_summary">Bösartige Peers während laufender Torrents automatisch erkennen und sperren.</string>
+    <string name="pref_pbh_check_interval_title">Prüfintervall, s</string>
+    <string name="pref_pbh_ban_duration_title">Sperrdauer, ms</string>
+    <string name="pref_pbh_ban_duration_summary">Wie lange ein gesperrter Peer gesperrt bleibt. 0 = dauerhaft, bis er manuell entfernt wird.</string>
+    <string name="pref_pbh_anti_vampire_title">AntiVampire</string>
+    <string name="pref_pbh_anti_vampire_summary">Peers sperren, die viele Daten empfangen, aber nie Blöcke zurückgeben (null Fortschritt).</string>
+    <string name="pref_pbh_anti_vampire_upload_threshold_title">Upload-Schwelle, Bytes</string>
+    <string name="pref_pbh_anti_vampire_min_progress_title">Min. gemeldeter Fortschritt, ppm</string>
+    <string name="pref_pbh_client_name_blacklist_title">Client-Name-Blacklist</string>
+    <string name="pref_pbh_client_name_blacklist_summary">Peers sperren, deren Client-Name einem gesperrten Muster entspricht.</string>
+    <string name="pref_pbh_pcb_title">Prüfung auf falschen Fortschritt</string>
+    <string name="pref_pbh_pcb_summary">Erkennt Peers mit falschem Download-Fortschritt durch Vergleich mit den an sie gesendeten Daten.</string>
+    <string name="pref_pbh_pcb_torrent_minimum_size_title">Mindestgröße des Torrents, Bytes</string>
+    <string name="pref_pbh_pcb_block_excessive_title">Übermäßige Clients sperren</string>
+    <string name="pref_pbh_pcb_block_excessive_summary">Peers sperren, die mehr Daten erhalten haben wollen, als der Torrent enthält.</string>
+    <string name="pref_pbh_pcb_excessive_threshold_title">Übermäßigkeits-Schwelle</string>
+    <string name="pref_pbh_pcb_maximum_difference_title">Max. Fortschrittsdifferenz</string>
+    <string name="pref_pbh_pcb_maximum_difference_summary">Maximal erlaubte Differenz zwischen gemeldetem und berechnetem Fortschritt (Anteil).</string>
+    <string name="pref_pbh_pcb_rewind_maximum_difference_title">Max. Fortschrittsrücksprung</string>
+    <string name="pref_pbh_pcb_ban_delay_duration_title">Sperrverzögerung, ms</string>
+    <string name="pref_pbh_pcb_ban_delay_duration_summary">Wie lange ein verdächtiger Peer beobachtet wird, bevor er gesperrt wird.</string>
+    <string name="pref_pbh_pcb_ipv4_prefix_length_title">IPv4-Präfixlänge</string>
+    <string name="pref_pbh_pcb_ipv6_prefix_length_title">IPv6-Präfixlänge</string>
+    <string name="pref_pbh_pcb_fast_pcb_test_percentage_title">Prozentsatz der Schnellprüfung</string>
+    <string name="pref_pbh_pcb_fast_pcb_test_blocking_duration_title">Dauer der Schnellprüfung, ms</string>
+    <string name="pref_btn_category">BTN-Netzwerk</string>
+    <string name="pref_btn_category_summary">Verbindung zu einer BitTorrent Threat Network (BTN)-Instanz zum Teilen und Empfangen von Peer-Sperrlisten und Swarm-Daten. Kompatibel mit dem BTN-Spec-Protokoll.</string>
+    <string name="pref_btn_enabled_title">Aktiviert</string>
+    <string name="pref_btn_enabled_summary">BTN-Cloud-Regeln abrufen und anwenden, optional Sperr-/Swarm-Daten teilen.</string>
+    <string name="pref_btn_config_url_title">Konfigurations-URL</string>
+    <string name="pref_btn_config_url_summary">Der Konfigurations-Endpunkt der BTN-Instanz.</string>
+    <string name="pref_btn_app_id_title">App-ID</string>
+    <string name="pref_btn_app_secret_title">App-Geheimnis</string>
+    <string name="pref_btn_submit_bans_title">Sperrliste teilen</string>
+    <string name="pref_btn_submit_bans_summary">Senden Sie Ihre aktive Sperrliste an den BTN-Server. Erfordert Ihre Zustimmung.</string>
+    <string name="pref_btn_submit_swarm_title">Swarm-Daten teilen</string>
+    <string name="pref_btn_submit_swarm_summary">Senden Sie Ihre verbundenen Peer-Swarm-Daten an den BTN-Server. Erfordert Ihre Zustimmung.</string>
+    <string name="not_set">Nicht festgelegt</string>
+    <string name="anti_leech_pbh_tab">PBH/BTN</string>
+    <string name="pref_header_anti_leech">Anti-leech</string>
     <string name="piece_map">Übersicht der Teile</string>
     <string name="resume_torrent">Fortfahren</string>
     <string name="pause_torrent">Pausieren</string>
@@ -535,6 +579,8 @@
     <string name="pref_watch_dir_delete_file_title">.torrent Datei nach dem Hinzufügen löschen</string>
     <string name="journal_filter_peer_log">Verbindungsprotokoll</string>
     <string name="journal_filter_session_log">Sitzungsprotokoll</string>
+    <string name="journal_filter_pbh_log">Anti-Leech-Protokoll</string>
+
     <string name="external_storage_name" formatted="false">Externer Speicher %1$d</string>
     <string name="log_journal">Journal</string>
     <string name="pref_foreground_notify_sorting_entries_3">Hinzugefügt (älteste zuerst)</string>

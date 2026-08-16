@@ -423,7 +423,10 @@ public class Logger {
 
         for (int i = startPos; i <= endPos; i++) {
             LogEntry entry = buf.get(i);
-            printStream.println(timeStamp ? entry.toStringWithTimeStamp() : entry.toString());
+            // Use an explicit '\n' instead of println() so the output is
+            // deterministic and identical across platforms (println() would
+            // emit '\r\n' on Windows and break tests/parsers).
+            printStream.print((timeStamp ? entry.toStringWithTimeStamp() : entry.toString()) + "\n");
             if (!printStream.checkError()) {
                 count++;
             }

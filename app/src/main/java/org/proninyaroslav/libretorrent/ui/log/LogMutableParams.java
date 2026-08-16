@@ -27,6 +27,7 @@ import androidx.databinding.library.baseAdapters.BR;
 public class LogMutableParams extends BaseObservable {
     private boolean logging;
     private boolean logSessionFilter;
+    private boolean logPbhFilter;
     private boolean logDhtFilter;
     private boolean logPeerFilter;
     private boolean logPortmapFilter;
@@ -50,6 +51,16 @@ public class LogMutableParams extends BaseObservable {
     public void setLogSessionFilter(boolean logSessionFilter) {
         this.logSessionFilter = logSessionFilter;
         notifyPropertyChanged(BR.logSessionFilter);
+    }
+
+    @Bindable
+    public boolean isLogPbhFilter() {
+        return logPbhFilter;
+    }
+
+    public void setLogPbhFilter(boolean logPbhFilter) {
+        this.logPbhFilter = logPbhFilter;
+        notifyPropertyChanged(BR.logPbhFilter);
     }
 
     @Bindable
@@ -98,6 +109,7 @@ public class LogMutableParams extends BaseObservable {
         return "LogMutableParams{" +
                 "logging=" + logging +
                 ", logSessionFilter=" + logSessionFilter +
+                ", logPbhFilter=" + logPbhFilter +
                 ", logDhtFilter=" + logDhtFilter +
                 ", logPeerFilter=" + logPeerFilter +
                 ", logPortmapFilter=" + logPortmapFilter +

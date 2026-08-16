@@ -19,6 +19,8 @@
 
 package org.proninyaroslav.libretorrent.core.model.session;
 
+import androidx.annotation.NonNull;
+
 import org.libtorrent4j.alerts.Alert;
 import org.libtorrent4j.alerts.DhtLogAlert;
 import org.libtorrent4j.alerts.LogAlert;
@@ -37,6 +39,11 @@ public class SessionLogger extends Logger {
          * Posts some session events
          */
         SESSION_LOG,
+
+        /*
+         * Posts PeerBanHelper anti-leech events
+         */
+        PBH_LOG,
 
         /*
          * Posts DHT events
@@ -63,6 +70,8 @@ public class SessionLogger extends Logger {
     public enum SessionLogFilter {
         SESSION((entry) -> entry == null || entry.getTag().equals(SessionLogEntryType.SESSION_LOG.name())),
 
+        PBH((entry) -> entry == null || entry.getTag().equals(SessionLogEntryType.PBH_LOG.name())),
+
         DHT((entry) -> entry == null || entry.getTag().equals(SessionLogEntryType.DHT_LOG.name())),
 
         PEER((entry) -> entry == null || entry.getTag().equals(SessionLogEntryType.PEER_LOG.name())),
@@ -83,18 +92,21 @@ public class SessionLogger extends Logger {
     }
 
     public static class SessionFilterParams {
-        final boolean filterSessionLog;
-        final boolean filterDhtLog;
-        final boolean filterPeerLog;
-        final boolean filterPortmapLog;
-        final boolean filterTorrentLog;
+        public final boolean filterSessionLog;
+        public final boolean filterPbhLog;
+        public final boolean filterDhtLog;
+        public final boolean filterPeerLog;
+        public final boolean filterPortmapLog;
+        public final boolean filterTorrentLog;
 
-        SessionFilterParams(boolean filterSessionLog,
-                            boolean filterDhtLog,
-                            boolean filterPeerLog,
-                            boolean filterPortmapLog,
-                            boolean filterTorrentLog) {
+        public SessionFilterParams(boolean filterSessionLog,
+                                   boolean filterPbhLog,
+                                   boolean filterDhtLog,
+                                   boolean filterPeerLog,
+                                   boolean filterPortmapLog,
+                                   boolean filterTorrentLog) {
             this.filterSessionLog = filterSessionLog;
+            this.filterPbhLog = filterPbhLog;
             this.filterDhtLog = filterDhtLog;
             this.filterPeerLog = filterPeerLog;
             this.filterPortmapLog = filterPortmapLog;
@@ -156,9 +168,20 @@ public class SessionLogger extends Logger {
         }
     }
 
-    void applyFilterParams(SessionFilterParams params) {
-        Logger.NewFilter[] addFilters = new Logger.NewFilter[5];
-        String[] removeFilters = new String[5];
+    /*
+     * Posts a PeerBanHelper anti-leech entry into the session log with the
+     * PBH_LOG tag, so it shows up in the log page under its own filter.
+     */
+    public void logPbh(@NonNull String msg) {
+        send(new LogEntry(nextLogEntryId++,
+                SessionLogEntryType.PBH_LOG.name(),
+                msg,
+                System.currentTimeMillis()));
+    }
+
+    public void applyFilterParams(SessionFilterParams params) {
+        Logger.NewFilter[] addFilters = new Logger.NewFilter[6];
+        String[] removeFilters = new String[6];
 
         if (params.filterSessionLog) {
             addFilters[0] = SessionLogFilter.SESSION.filter();
@@ -166,28 +189,34 @@ public class SessionLogger extends Logger {
             removeFilters[0] = SessionLogFilter.SESSION.name();
         }
 
-        if (params.filterDhtLog) {
-            addFilters[1] = SessionLogFilter.DHT.filter();
+        if (params.filterPbhLog) {
+            addFilters[1] = SessionLogFilter.PBH.filter();
         } else {
-            removeFilters[1] = SessionLogFilter.DHT.name();
+            removeFilters[1] = SessionLogFilter.PBH.name();
+        }
+
+        if (params.filterDhtLog) {
+            addFilters[2] = SessionLogFilter.DHT.filter();
+        } else {
+            removeFilters[2] = SessionLogFilter.DHT.name();
         }
 
         if (params.filterPeerLog) {
-            addFilters[2] = SessionLogFilter.PEER.filter();
+            addFilters[3] = SessionLogFilter.PEER.filter();
         } else {
-            removeFilters[2] = SessionLogFilter.PEER.name();
+            removeFilters[3] = SessionLogFilter.PEER.name();
         }
 
         if (params.filterPortmapLog) {
-            addFilters[3] = SessionLogFilter.PORTMAP.filter();
+            addFilters[4] = SessionLogFilter.PORTMAP.filter();
         } else {
-            removeFilters[3] = SessionLogFilter.PORTMAP.name();
+            removeFilters[4] = SessionLogFilter.PORTMAP.name();
         }
 
         if (params.filterTorrentLog) {
-            addFilters[4] = SessionLogFilter.TORRENT.filter();
+            addFilters[5] = SessionLogFilter.TORRENT.filter();
         } else {
-            removeFilters[4] = SessionLogFilter.TORRENT.name();
+            removeFilters[5] = SessionLogFilter.TORRENT.name();
         }
 
         removeFilter(removeFilters);

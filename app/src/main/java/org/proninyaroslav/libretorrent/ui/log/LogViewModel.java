@@ -81,6 +81,7 @@ public class LogViewModel extends AndroidViewModel {
     private void initMutableParams() {
         mutableParams.setLogging(pref.logging());
         mutableParams.setLogSessionFilter(pref.logSessionFilter());
+        mutableParams.setLogPbhFilter(pref.logPbhFilter());
         mutableParams.setLogDhtFilter(pref.logDhtFilter());
         mutableParams.setLogPeerFilter(pref.logPeerFilter());
         mutableParams.setLogPortmapFilter(pref.logPortmapFilter());
@@ -125,22 +126,45 @@ public class LogViewModel extends AndroidViewModel {
                             break;
                         case BR.logSessionFilter:
                             pref.logSessionFilter(mutableParams.isLogSessionFilter());
+                            applyLogFilters();
+                            break;
+                        case BR.logPbhFilter:
+                            pref.logPbhFilter(mutableParams.isLogPbhFilter());
+                            applyLogFilters();
                             break;
                         case BR.logDhtFilter:
                             pref.logDhtFilter(mutableParams.isLogDhtFilter());
+                            applyLogFilters();
                             break;
                         case BR.logPeerFilter:
                             pref.logPeerFilter(mutableParams.isLogPeerFilter());
+                            applyLogFilters();
                             break;
                         case BR.logPortmapFilter:
                             pref.logPortmapFilter(mutableParams.isLogPortmapFilter());
+                            applyLogFilters();
                             break;
                         case BR.logTorrentFilter:
                             pref.logTorrentFilter(mutableParams.isLogTorrentFilter());
+                            applyLogFilters();
                             break;
                     }
                 }
             };
+
+    /*
+     * Applies the current filter prefs to the session logger right away, so
+     * toggles in the filter dialog take effect immediately.
+     */
+    private void applyLogFilters() {
+        engine.applyLogFilters(
+                mutableParams.isLogSessionFilter(),
+                mutableParams.isLogPbhFilter(),
+                mutableParams.isLogDhtFilter(),
+                mutableParams.isLogPeerFilter(),
+                mutableParams.isLogPortmapFilter(),
+                mutableParams.isLogTorrentFilter());
+    }
 
     void pauseLog() {
         engine.getSessionLogger().pause();

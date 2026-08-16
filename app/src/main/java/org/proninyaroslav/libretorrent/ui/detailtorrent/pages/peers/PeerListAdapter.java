@@ -22,6 +22,7 @@ package org.proninyaroslav.libretorrent.ui.detailtorrent.pages.peers;
 import android.content.Context;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -99,7 +100,7 @@ public class PeerListAdapter extends ListAdapter<PeerItem, PeerListAdapter.ViewH
     };
 
     public interface ClickListener {
-        boolean onItemLongClick(@NonNull PeerItem item);
+        boolean onItemLongClick(@NonNull View view, @NonNull PeerItem item);
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -119,7 +120,7 @@ public class PeerListAdapter extends ListAdapter<PeerItem, PeerListAdapter.ViewH
                     return false;
                 }
 
-                return listener.onItemLongClick(item);
+                return listener.onItemLongClick(itemView, item);
             });
 
             binding.ip.setText(item.ip);

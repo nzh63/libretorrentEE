@@ -42,6 +42,8 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
     public int connectionType;
     public int port;
     public int progress;
+    /* Peer's progress in parts per million, more precise than progress */
+    public int progressPpm;
     public int downSpeed;
     public int upSpeed;
 
@@ -61,7 +63,8 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
         relevance = calcRelevance(peer, torrentStatus);
         connectionType = getConnectionType(peer);
         port = peer.port();
-        progress = peer.progressPpm() / 10000;
+        progressPpm = peer.progressPpm();
+        progress = progressPpm / 10000;
         downSpeed = peer.downSpeed();
         upSpeed = peer.upSpeed();
     }
@@ -81,6 +84,7 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
         this.connectionType = connectionType;
         this.port = port;
         this.progress = progress;
+        this.progressPpm = progress * 10000;
         this.downSpeed = downSpeed;
         this.upSpeed = upSpeed;
     }
@@ -96,6 +100,7 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
         connectionType = source.readInt();
         port = source.readInt();
         progress = source.readInt();
+        progressPpm = source.readInt();
         downSpeed = source.readInt();
         upSpeed = source.readInt();
     }
@@ -147,6 +152,7 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
         dest.writeInt(connectionType);
         dest.writeInt(port);
         dest.writeInt(progress);
+        dest.writeInt(progressPpm);
         dest.writeInt(downSpeed);
         dest.writeInt(upSpeed);
     }
@@ -181,6 +187,7 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
         result = prime * result + connectionType;
         result = prime * result + port;
         result = prime * result + progress;
+        result = prime * result + progressPpm;
         result = prime * result + downSpeed;
         result = prime * result + upSpeed;
 
@@ -205,6 +212,7 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
                 connectionType == state.connectionType &&
                 port == state.port &&
                 progress == state.progress &&
+                progressPpm == state.progressPpm &&
                 downSpeed == state.downSpeed &&
                 upSpeed == state.upSpeed;
     }
@@ -221,6 +229,7 @@ public class PeerInfo extends AbstractInfoParcel<PeerInfo> {
                 ", connectionType='" + connectionType + '\'' +
                 ", port=" + port +
                 ", progress=" + progress +
+                ", progressPpm=" + progressPpm +
                 ", downSpeed=" + downSpeed +
                 ", upSpeed=" + upSpeed +
                 '}';

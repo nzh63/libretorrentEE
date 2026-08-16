@@ -256,6 +256,65 @@
     <string name="peer_connection_type_web">Web</string>
     <string name="peer_connection_type_utp">μTP</string>
     <string name="peer_list_empty">当前种子还没有连接到任何用户</string>
+    <string name="ban_peer_ip">封禁IP</string>
+    <string name="ban_peer_user_agent">封禁用户代理</string>
+    <string name="ban_peer_ip_and_user_agent">封禁IP和用户代理</string>
+    <string name="share_peer_ip">分享IP…</string>
+    <string name="peer_banned_by_ip">已将IP加入黑名单并封禁该节点</string>
+    <string name="peer_banned_by_user_agent">已将用户代理加入黑名单并封禁该节点</string>
+    <string name="peer_banned_by_ip_and_user_agent">已将IP和用户代理加入黑名单并封禁该节点</string>
+    <string name="peer_blacklist_ip_tab">IP</string>
+    <string name="peer_blacklist_user_agent_tab">用户代理</string>
+    <string name="empty_blacklist_ip">暂无封禁IP</string>
+    <string name="empty_blacklist_user_agent">暂无封禁用户代理</string>
+    <string name="add_blacklist_ip_title">添加封禁IP</string>
+    <string name="add_blacklist_user_agent_title">添加封禁用户代理</string>
+    <string name="blacklist_ip_hint">IP地址，例如 192.168.1.1</string>
+    <string name="blacklist_user_agent_hint">用户代理，例如 Transmission</string>
+    <string name="invalid_ip">无效的IP地址</string>
+    <!-- PeerBanHelper anti-leech settings -->
+    <string name="pref_pbh_category">PeerBanHelper 反吸血</string>
+    <string name="pref_pbh_category_summary">自动封禁恶意、吸血和异常的节点，兼容 PeerBanHelper 检测规则，开箱即用。</string>
+    <string name="pref_pbh_enabled_title">启用</string>
+    <string name="pref_pbh_enabled_summary">种子运行时自动检测并封禁恶意节点。</string>
+    <string name="pref_pbh_check_interval_title">检查间隔（秒）</string>
+    <string name="pref_pbh_ban_duration_title">封禁时长（毫秒）</string>
+    <string name="pref_pbh_ban_duration_summary">被封禁节点保持封禁的时长。0 = 永久封禁，直到手动移除。</string>
+    <string name="pref_pbh_anti_vampire_title">反吸血（AntiVampire）</string>
+    <string name="pref_pbh_anti_vampire_summary">封禁大量下载数据但从不返回分片（进度恒为零）的节点。</string>
+    <string name="pref_pbh_anti_vampire_upload_threshold_title">上传阈值（字节）</string>
+    <string name="pref_pbh_anti_vampire_min_progress_title">最低上报进度（ppm）</string>
+    <string name="pref_pbh_client_name_blacklist_title">客户端名黑名单</string>
+    <string name="pref_pbh_client_name_blacklist_summary">封禁上报客户端名匹配黑名单模式的节点。</string>
+    <string name="pref_pbh_pcb_title">虚假进度检测</string>
+    <string name="pref_pbh_pcb_summary">通过对比上传数据量，检测上报虚假下载进度的节点。</string>
+    <string name="pref_pbh_pcb_torrent_minimum_size_title">最小种子大小（字节）</string>
+    <string name="pref_pbh_pcb_block_excessive_title">封禁超额下载客户端</string>
+    <string name="pref_pbh_pcb_block_excessive_summary">封禁声称下载量超过种子大小的节点。</string>
+    <string name="pref_pbh_pcb_excessive_threshold_title">超额阈值</string>
+    <string name="pref_pbh_pcb_maximum_difference_title">最大进度差异</string>
+    <string name="pref_pbh_pcb_maximum_difference_summary">上报进度与计算进度之间允许的最大差异（比例）。</string>
+    <string name="pref_pbh_pcb_rewind_maximum_difference_title">最大进度回退</string>
+    <string name="pref_pbh_pcb_ban_delay_duration_title">封禁延迟（毫秒）</string>
+    <string name="pref_pbh_pcb_ban_delay_duration_summary">疑似作弊节点在被封禁前的观察时长。</string>
+    <string name="pref_pbh_pcb_ipv4_prefix_length_title">IPv4 前缀长度</string>
+    <string name="pref_pbh_pcb_ipv6_prefix_length_title">IPv6 前缀长度</string>
+    <string name="pref_pbh_pcb_fast_pcb_test_percentage_title">快速探测百分比</string>
+    <string name="pref_pbh_pcb_fast_pcb_test_blocking_duration_title">快速探测时长（毫秒）</string>
+    <string name="pref_btn_category">BTN 网络</string>
+    <string name="pref_btn_category_summary">连接 BitTorrent 威胁网络（BTN）实例，共享和接收节点封禁列表与种群数据。兼容 BTN-Spec
+        协议。</string>
+    <string name="pref_btn_enabled_title">启用</string>
+    <string name="pref_btn_enabled_summary">获取并应用 BTN 云规则，可选共享封禁/种群数据。</string>
+    <string name="pref_btn_config_url_title">配置 URL</string>
+    <string name="pref_btn_config_url_summary">BTN 实例的配置端点。</string>
+    <string name="pref_btn_app_id_title">App ID</string>
+    <string name="pref_btn_app_secret_title">App 密钥</string>
+    <string name="pref_btn_submit_bans_title">共享封禁列表</string>
+    <string name="pref_btn_submit_bans_summary">将当前封禁列表提交到 BTN 服务器。需要您的同意。</string>
+    <string name="pref_btn_submit_swarm_title">共享种群数据</string>
+    <string name="pref_btn_submit_swarm_summary">将连接的节点种群数据提交到 BTN 服务器。需要您的同意。</string>
+    <string name="not_set">未设置</string>
     <string name="piece_map">区块图</string>
     <string name="resume_torrent">继续</string>
     <string name="pause_torrent">暂停</string>
@@ -361,6 +420,8 @@
     <string name="journal_stop_recording">停止录制</string>
     <string name="journal_started_recording">开始录制</string>
     <string name="journal_filter_session_log">会话日志</string>
+    <string name="journal_filter_pbh_log">反吸血日志</string>
+
     <string name="journal_filter_dht_log">DHT 日志</string>
     <string name="journal_filter_peer_log">连接日志</string>
     <string name="journal_filter_portmap_log">UPnP/NAT-PMP日志</string>
@@ -377,9 +438,12 @@
     <string name="pref_header_storage">存储</string>
     <string name="pref_header_limitations">限制</string>
     <string name="pref_header_network">网络</string>
+    <string name="pref_header_anti_leech">反吸血</string>
     <string name="pref_header_scheduling">计划调度</string>
     <string name="pref_header_feed">RSS 订阅</string>
     <string name="pref_header_streaming">流媒体</string>
+    <!-- Anti-leech tabs -->
+    <string name="anti_leech_pbh_tab">PBH/BTN</string>
     <!-- Storage settings -->
     <string name="pref_save_torrents_in_title">将种子保存于…</string>
     <string name="pref_move_after_download_title">下载完成后移动文件</string>
