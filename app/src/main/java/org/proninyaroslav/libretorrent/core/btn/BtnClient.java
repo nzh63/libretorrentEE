@@ -77,26 +77,31 @@ public class BtnClient {
     public IpListResult fetchIpDenylist(@NonNull BtnSettings settings,
                                         @NonNull BtnConfig config,
                                         @NonNull String rev) {
-        return fetchIpList(settings, config.ipDenylistEndpoint, rev);
+        return fetchIpList(settings, config, config.ipDenylistEndpoint, rev,
+                config.ipDenylistPow ? "ip_denylist" : null);
     }
 
     @Nullable
     public IpListResult fetchIpAllowlist(@NonNull BtnSettings settings,
                                          @NonNull BtnConfig config,
                                          @NonNull String rev) {
-        return fetchIpList(settings, config.ipAllowlistEndpoint, rev);
+        return fetchIpList(settings, config, config.ipAllowlistEndpoint, rev,
+                config.ipAllowlistPow ? "ip_allowlist" : null);
     }
 
     @Nullable
     private IpListResult fetchIpList(@NonNull BtnSettings settings,
+                                     @NonNull BtnConfig config,
                                      @Nullable String endpoint,
-                                     @NonNull String rev) {
+                                     @NonNull String rev,
+                                     @Nullable String powType) {
         if (endpoint == null || endpoint.isEmpty())
             return null;
         if (rev == null || rev.isEmpty())
             rev = INITIAL_REV;
         try {
-            BtnHttpClient.GetResult res = http.get(endpoint, settings, rev);
+            BtnHttpClient.GetResult res = http.get(endpoint, settings, rev,
+                    powHeaders(settings, config, powType));
             if (res == null || res.isNoContent())
                 return null; // no change
             if (!res.isSuccessful() || res.body == null)
@@ -133,7 +138,9 @@ public class BtnClient {
         if (rev == null || rev.isEmpty())
             rev = INITIAL_REV;
         try {
-            BtnHttpClient.GetResult res = http.get(config.peerIdentityEndpoint, settings, rev);
+            BtnHttpClient.GetResult res = http.get(config.peerIdentityEndpoint, settings, rev,
+                    powHeaders(settings, config,
+                            config.peerIdentityPow ? "rule_peer_identity" : null));
             if (res == null || res.isNoContent())
                 return null;
             if (!res.isSuccessful() || res.body == null)
@@ -166,7 +173,8 @@ public class BtnClient {
                               @NonNull byte[] payload) {
         if (config.submitBansEndpoint == null || config.submitBansEndpoint.isEmpty())
             return false;
-        return submit(settings, config.submitBansEndpoint, payload);
+        return submit(settings, config, config.submitBansEndpoint, payload,
+                config.submitBansPow ? "submit_bans" : null);
     }
 
     /*
@@ -177,16 +185,39 @@ public class BtnClient {
                                @NonNull byte[] payload) {
         if (config.submitSwarmEndpoint == null || config.submitSwarmEndpoint.isEmpty())
             return false;
-        return submit(settings, config.submitSwarmEndpoint, payload);
+        return submit(settings, config, config.submitSwarmEndpoint, payload,
+                config.submitSwarmPow ? "submit_swarm" : null);
     }
 
-    private boolean submit(@NonNull BtnSettings settings, @NonNull String endpoint, @NonNull byte[] payload) {
+    private boolean submit(@NonNull BtnSettings settings,
+                           @NonNull BtnConfig config,
+                           @NonNull String endpoint,
+                           @NonNull byte[] payload,
+                           @Nullable String powType) {
         try {
-            int code = http.postGzipJson(endpoint, settings, payload);
+            int code = http.postGzipJson(endpoint, settings, payload,
+                    powHeaders(settings, config, powType));
             return code >= 200 && code < 300;
         } catch (IOException e) {
             return false;
         }
+    }
+
+    /*
+     * Solves the proof-of-work captcha for the given ability type when the
+     * server requires one. Returns null when no captcha is needed or the
+     * challenge could not be solved (the request is then sent without the
+     * headers, mirroring upstream's fallback behaviour).
+     */
+    @Nullable
+    private java.util.Map<String, String> powHeaders(@NonNull BtnSettings settings,
+                                                     @NonNull BtnConfig config,
+                                                     @Nullable String powType) {
+        if (powType == null)
+            return null;
+        if (config.powCaptchaEndpoint == null || config.powCaptchaEndpoint.isEmpty())
+            return null;
+        return http.gatherPowHeaders(config.powCaptchaEndpoint, powType, settings);
     }
 
     /*
@@ -205,7 +236,9 @@ public class BtnClient {
             byte[] body = "{\"ifaddr\":\"default\"}"
                     .getBytes(java.nio.charset.StandardCharsets.UTF_8);
             BtnHttpClient.GetResult res =
-                    http.postJson(config.heartbeatEndpoint, settings, body);
+                    http.postJson(config.heartbeatEndpoint, settings, body,
+                            powHeaders(settings, config,
+                                    config.heartbeatPow ? "heartbeat" : null));
             if (res == null || !res.isSuccessful())
                 return null;
             if (res.body == null || res.isNoContent())
@@ -235,7 +268,9 @@ public class BtnClient {
                                  @NonNull byte[] payload) {
         if (config.submitHistoryEndpoint == null || config.submitHistoryEndpoint.isEmpty())
             return false;
-        return submit(settings, config.submitHistoryEndpoint, payload);
+        // Upstream challenges submit_histories under the singular type name
+        return submit(settings, config, config.submitHistoryEndpoint, payload,
+                config.submitHistoryPow ? "submit_history" : null);
     }
 
     /*
@@ -253,7 +288,8 @@ public class BtnClient {
             String url = config.ipQueryEndpoint
                     + (config.ipQueryEndpoint.contains("?") ? "&" : "?")
                     + "ip=" + java.net.URLEncoder.encode(ip, "UTF-8");
-            BtnHttpClient.GetResult res = http.get(url, settings, null);
+            BtnHttpClient.GetResult res = http.get(url, settings, null,
+                    powHeaders(settings, config, config.ipQueryPow ? "ip_query" : null));
             if (res == null || !res.isSuccessful() || res.body == null)
                 return null;
             String body = res.bodyAsUtf8();

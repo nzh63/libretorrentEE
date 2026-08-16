@@ -86,6 +86,42 @@ public class BtnConfigTest {
     }
 
     @Test
+    public void parsesPowCaptchaConfig() {
+        String json =
+                """
+                {
+                  "min_protocol_version": 20,
+                  "max_protocol_version": 20,
+                  "proof_of_work_captcha": { "endpoint": "https://btn/powCaptcha" },
+                  "ability": {
+                    "submit_bans": { "endpoint": "https://btn/syncBanHistory", "pow_captcha": true },
+                    "heartbeat": { "endpoint": "https://btn/heartbeat", "pow_captcha": true },
+                    "submit_histories": { "endpoint": "https://btn/submitHistory", "pow_captcha": true },
+                    "ip_query": { "endpoint": "https://btn/queryIp", "pow_captcha": true },
+                    "ip_denylist": { "endpoint": "https://btn/ruleIpDenylist" },
+                    "submit_swarm": { "endpoint": "https://btn/syncSwarm", "pow_captcha": false }
+                  }
+                }
+                """;
+        BtnConfig cfg = BtnConfig.parse(json, 20);
+        assertEquals("https://btn/powCaptcha", cfg.powCaptchaEndpoint);
+        assertTrue(cfg.submitBansPow);
+        assertTrue(cfg.heartbeatPow);
+        assertTrue(cfg.submitHistoryPow);
+        assertTrue(cfg.ipQueryPow);
+        assertTrue(!cfg.ipDenylistPow);
+        assertTrue(!cfg.submitSwarmPow);
+    }
+
+    @Test
+    public void powEndpointAbsent_flagsFalse() {
+        BtnConfig cfg = BtnConfig.parse(valid, 20);
+        assertNull(cfg.powCaptchaEndpoint);
+        assertTrue(!cfg.submitBansPow);
+        assertTrue(!cfg.heartbeatPow);
+    }
+
+    @Test
     public void extraAbilitiesAbsent_nullEndpoints() {
         assertNull(BtnConfig.parse(valid, 20).heartbeatEndpoint);
         assertNull(BtnConfig.parse(valid, 20).submitHistoryEndpoint);

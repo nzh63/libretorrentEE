@@ -47,6 +47,20 @@ public class BtnConfig {
     @Nullable public final String ipQueryEndpoint;
     /* Optional iframe widget for browsing an IP's BTN record in a browser */
     @Nullable public final String ipQueryIframeEndpoint;
+    /*
+     * Proof-of-work captcha endpoint (root-level "proof_of_work_captcha"
+     * block), or null when the server does not challenge this client. Only
+     * abilities whose config sets "pow_captcha": true require a solution.
+     */
+    @Nullable public final String powCaptchaEndpoint;
+    public final boolean ipDenylistPow;
+    public final boolean ipAllowlistPow;
+    public final boolean peerIdentityPow;
+    public final boolean submitBansPow;
+    public final boolean submitSwarmPow;
+    public final boolean heartbeatPow;
+    public final boolean submitHistoryPow;
+    public final boolean ipQueryPow;
 
     /* Refresh intervals in ms (defaults per spec) */
     public final long ipDenylistInterval;
@@ -70,6 +84,15 @@ public class BtnConfig {
                       @Nullable String submitHistoryEndpoint,
                       @Nullable String ipQueryEndpoint,
                       @Nullable String ipQueryIframeEndpoint,
+                      @Nullable String powCaptchaEndpoint,
+                      boolean ipDenylistPow,
+                      boolean ipAllowlistPow,
+                      boolean peerIdentityPow,
+                      boolean submitBansPow,
+                      boolean submitSwarmPow,
+                      boolean heartbeatPow,
+                      boolean submitHistoryPow,
+                      boolean ipQueryPow,
                       long ipDenylistInterval,
                       long ipAllowlistInterval,
                       long peerIdentityInterval,
@@ -86,6 +109,15 @@ public class BtnConfig {
         this.submitHistoryEndpoint = submitHistoryEndpoint;
         this.ipQueryEndpoint = ipQueryEndpoint;
         this.ipQueryIframeEndpoint = ipQueryIframeEndpoint;
+        this.powCaptchaEndpoint = powCaptchaEndpoint;
+        this.ipDenylistPow = ipDenylistPow;
+        this.ipAllowlistPow = ipAllowlistPow;
+        this.peerIdentityPow = peerIdentityPow;
+        this.submitBansPow = submitBansPow;
+        this.submitSwarmPow = submitSwarmPow;
+        this.heartbeatPow = heartbeatPow;
+        this.submitHistoryPow = submitHistoryPow;
+        this.ipQueryPow = ipQueryPow;
         this.ipDenylistInterval = ipDenylistInterval;
         this.ipAllowlistInterval = ipAllowlistInterval;
         this.peerIdentityInterval = peerIdentityInterval;
@@ -95,6 +127,8 @@ public class BtnConfig {
 
     public static final BtnConfig INVALID = new BtnConfig(0, 0,
             null, null, null, null, null, null, null, null, null,
+            null,
+            false, false, false, false, false, false, false, false,
             DEFAULT_IP_LIST_INTERVAL, DEFAULT_IP_LIST_INTERVAL,
             DEFAULT_PEER_IDENTITY_INTERVAL,
             DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_SUBMIT_HISTORY_INTERVAL);
@@ -138,6 +172,21 @@ public class BtnConfig {
         String ipQuery = getEndpoint(ability, "ip_query");
         String ipQueryIframe = getOptionalString(ability, "ip_query", "iframe_endpoint");
 
+        String powEndpoint = null;
+        if (obj.has("proof_of_work_captcha") && obj.get("proof_of_work_captcha").isJsonObject()) {
+            JsonObject pow = obj.getAsJsonObject("proof_of_work_captcha");
+            if (pow.has("endpoint") && pow.get("endpoint").isJsonPrimitive())
+                powEndpoint = pow.get("endpoint").getAsString();
+        }
+        boolean denylistPow = getBool(ability, "ip_denylist", "pow_captcha");
+        boolean allowlistPow = getBool(ability, "ip_allowlist", "pow_captcha");
+        boolean peerIdentityPow = getBool(ability, "rule_peer_identity", "pow_captcha");
+        boolean submitBansPow = getBool(ability, "submit_bans", "pow_captcha");
+        boolean submitSwarmPow = getBool(ability, "submit_swarm", "pow_captcha");
+        boolean heartbeatPow = getBool(ability, "heartbeat", "pow_captcha");
+        boolean submitHistoryPow = getBool(ability, "submit_histories", "pow_captcha");
+        boolean ipQueryPow = getBool(ability, "ip_query", "pow_captcha");
+
         long denylistInterval = getInterval(ability, "ip_denylist", DEFAULT_IP_LIST_INTERVAL);
         long allowlistInterval = getInterval(ability, "ip_allowlist", DEFAULT_IP_LIST_INTERVAL);
         long peerIdentityInterval = getInterval(ability, "rule_peer_identity", DEFAULT_PEER_IDENTITY_INTERVAL);
@@ -147,6 +196,9 @@ public class BtnConfig {
         return new BtnConfig(minV, maxV,
                 denylist, allowlist, peerIdentity, submitBans, submitSwarm,
                 heartbeat, submitHistory, ipQuery, ipQueryIframe,
+                powEndpoint,
+                denylistPow, allowlistPow, peerIdentityPow, submitBansPow,
+                submitSwarmPow, heartbeatPow, submitHistoryPow, ipQueryPow,
                 denylistInterval, allowlistInterval, peerIdentityInterval,
                 heartbeatInterval, submitHistoryInterval);
     }
@@ -164,6 +216,20 @@ public class BtnConfig {
                 return mod.get("endpoint").getAsString();
         }
         return null;
+    }
+
+    /* Reads a boolean field from an ability block. */
+    private static boolean getBool(JsonObject ability, String key, String field) {
+        if (ability.has(key) && ability.get(key).isJsonObject()) {
+            JsonObject mod = ability.getAsJsonObject(key);
+            if (mod.has(field) && mod.get(field).isJsonPrimitive()) {
+                try {
+                    return mod.get(field).getAsBoolean();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return false;
     }
 
     /* Reads a non-endpoint string field from an ability block, or null. */

@@ -37,7 +37,8 @@ public class BtnClientAbilitiesTest {
         @Nullable
         public GetResult get(@NonNull String urlStr,
                              @NonNull BtnSettings settings,
-                             @Nullable String rev) throws IOException {
+                             @Nullable String rev,
+                             @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
             lastGetUrl = urlStr;
             if (getBody == null)
                 return null;
@@ -48,7 +49,8 @@ public class BtnClientAbilitiesTest {
         @Nullable
         public GetResult postJson(@NonNull String urlStr,
                                   @NonNull BtnSettings settings,
-                                  @NonNull byte[] jsonBody) {
+                                  @NonNull byte[] jsonBody,
+                                  @Nullable java.util.Map<String, String> extraHeaders) {
             lastPostUrl = urlStr;
             lastPostPayload = jsonBody;
             if (failPost)
@@ -60,8 +62,9 @@ public class BtnClientAbilitiesTest {
 
         @Override
         public int postGzipJson(@NonNull String urlStr,
-                                @NonNull BtnSettings settings,
-                                @NonNull byte[] jsonBody) {
+                                    @NonNull BtnSettings settings,
+                                    @NonNull byte[] jsonBody,
+                                    @Nullable java.util.Map<String, String> extraHeaders) {
             lastPostUrl = urlStr;
             lastPostPayload = jsonBody;
             return failPost ? 500 : postStatus;

@@ -56,7 +56,8 @@ public class BtnClientTest {
         @Nullable
         public GetResult get(@NonNull String urlStr,
                              @NonNull BtnSettings settings,
-                             @Nullable String rev) throws IOException {
+                             @Nullable String rev,
+                             @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
             revs.add(rev == null ? "null" : rev);
             return new GetResult(200, body.getBytes(java.nio.charset.StandardCharsets.UTF_8), contentVersion);
         }

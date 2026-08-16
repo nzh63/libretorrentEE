@@ -100,6 +100,17 @@ public class BtnHttpClient {
     public GetResult get(@NonNull String urlStr,
                          @NonNull BtnSettings settings,
                          @Nullable String rev) throws IOException {
+        return get(urlStr, settings, rev, null);
+    }
+
+    /*
+     * GET with additional request headers (e.g. solved PoW captcha headers).
+     */
+    @Nullable
+    public GetResult get(@NonNull String urlStr,
+                         @NonNull BtnSettings settings,
+                         @Nullable String rev,
+                         @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
         String current = urlStr;
         if (rev != null && !rev.isEmpty()) {
             current = current + (current.contains("?") ? "&" : "?") + "rev=" + rev;
@@ -114,6 +125,7 @@ public class BtnHttpClient {
             conn.setReadTimeout(READ_TIMEOUT_MS);
             conn.setRequestMethod("GET");
             applyAuthHeaders(conn, settings);
+            applyExtraHeaders(conn, extraHeaders);
             conn.setRequestProperty("Accept-Encoding", "gzip");
 
             int code = conn.getResponseCode();
@@ -143,6 +155,17 @@ public class BtnHttpClient {
     public int postGzipJson(@NonNull String urlStr,
                             @NonNull BtnSettings settings,
                             @NonNull byte[] jsonBody) throws IOException {
+        return postGzipJson(urlStr, settings, jsonBody, null);
+    }
+
+    /*
+     * POSTs a gzip-compressed JSON body with additional request headers
+     * (e.g. solved PoW captcha headers).
+     */
+    public int postGzipJson(@NonNull String urlStr,
+                            @NonNull BtnSettings settings,
+                            @NonNull byte[] jsonBody,
+                            @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
         String current = urlStr;
         boolean rePostBody = true;
         for (int redirects = 0; ; redirects++) {
@@ -154,6 +177,7 @@ public class BtnHttpClient {
             conn.setReadTimeout(READ_TIMEOUT_MS);
             conn.setRequestMethod(rePostBody ? "POST" : "GET");
             applyAuthHeaders(conn, settings);
+            applyExtraHeaders(conn, extraHeaders);
             if (rePostBody) {
                 conn.setRequestProperty("Content-Encoding", "gzip");
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -193,6 +217,18 @@ public class BtnHttpClient {
     public GetResult postJson(@NonNull String urlStr,
                               @NonNull BtnSettings settings,
                               @NonNull byte[] jsonBody) throws IOException {
+        return postJson(urlStr, settings, jsonBody, null);
+    }
+
+    /*
+     * POSTs a plain JSON body with additional request headers (e.g. solved
+     * PoW captcha headers).
+     */
+    @Nullable
+    public GetResult postJson(@NonNull String urlStr,
+                              @NonNull BtnSettings settings,
+                              @NonNull byte[] jsonBody,
+                              @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
         String current = urlStr;
         boolean rePostBody = true;
         for (int redirects = 0; ; redirects++) {
@@ -204,6 +240,7 @@ public class BtnHttpClient {
             conn.setReadTimeout(READ_TIMEOUT_MS);
             conn.setRequestMethod(rePostBody ? "POST" : "GET");
             applyAuthHeaders(conn, settings);
+            applyExtraHeaders(conn, extraHeaders);
             conn.setRequestProperty("Accept-Encoding", "gzip");
             if (rePostBody) {
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -230,6 +267,82 @@ public class BtnHttpClient {
             body = maybeDecompress(body, contentEncoding);
             return new GetResult(code, body, null);
         }
+    }
+
+    private static void applyExtraHeaders(@NonNull HttpURLConnection conn,
+                                          @Nullable java.util.Map<String, String> headers) {
+        if (headers == null)
+            return;
+        for (java.util.Map.Entry<String, String> e : headers.entrySet()) {
+            if (e.getKey() != null && e.getValue() != null)
+                conn.setRequestProperty(e.getKey(), e.getValue());
+        }
+    }
+
+    /*
+     * Fetches and solves a proof-of-work captcha from the server's
+     * proof_of_work_captcha endpoint, per BTN-Spec. Returns the
+     * X-BTN-PowID / X-BTN-PowSolution headers to attach to the upcoming
+     * request, or null on failure (the request then proceeds without them,
+     * like upstream PeerBanHelper, and may be rejected by the server).
+     */
+    @Nullable
+    public java.util.Map<String, String> gatherPowHeaders(@NonNull String powEndpoint,
+                                                          @NonNull String type,
+                                                          @NonNull BtnSettings settings) {
+        try {
+            String url = powEndpoint
+                    + (powEndpoint.contains("?") ? "&" : "?")
+                    + "type=" + java.net.URLEncoder.encode(type, "UTF-8");
+            GetResult res = get(url, settings, null);
+            if (res == null || !res.isSuccessful() || res.body == null)
+                return null;
+            String body = res.bodyAsUtf8();
+            if (body == null)
+                return null;
+
+            com.google.gson.JsonObject obj = com.google.gson.JsonParser
+                    .parseString(body).getAsJsonObject();
+            String id = optString(obj, "id", "challengeId", "challenge_id");
+            String challengeB64 = optString(obj, "challengeBase64", "challenge_base64");
+            String algorithm = optString(obj, "algorithm");
+            int difficultyBits = optInt(obj, "difficultyBits", "difficulty_bits");
+            if (id == null || id.isEmpty() || challengeB64 == null || challengeB64.isEmpty())
+                return null;
+            if (algorithm == null || algorithm.isEmpty())
+                algorithm = "SHA-256";
+
+            byte[] challenge = java.util.Base64.getDecoder().decode(challengeB64);
+            byte[] nonce = BtnPowCaptcha.solve(challenge, difficultyBits, algorithm);
+            java.util.Map<String, String> headers = new java.util.HashMap<>();
+            headers.put("X-BTN-PowID", id);
+            headers.put("X-BTN-PowSolution",
+                    java.util.Base64.getEncoder().encodeToString(nonce));
+            return headers;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static String optString(com.google.gson.JsonObject obj, String... keys) {
+        for (String key : keys) {
+            if (obj.has(key) && obj.get(key).isJsonPrimitive())
+                return obj.get(key).getAsString();
+        }
+        return null;
+    }
+
+    private static int optInt(com.google.gson.JsonObject obj, String... keys) {
+        for (String key : keys) {
+            if (obj.has(key) && obj.get(key).isJsonPrimitive()) {
+                try {
+                    return obj.get(key).getAsInt();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return 0;
     }
 
     private void applyAuthHeaders(@NonNull HttpURLConnection conn, @NonNull BtnSettings s) {

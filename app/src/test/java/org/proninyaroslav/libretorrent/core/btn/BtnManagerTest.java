@@ -50,7 +50,8 @@ public class BtnManagerTest {
         @Nullable
         public GetResult get(@NonNull String urlStr,
                              @NonNull BtnSettings settings,
-                             @Nullable String rev) throws IOException {
+                             @Nullable String rev,
+                             @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
             // Serve the config document for any GET.
             String body = """
                     {"min_protocol_version":20,"max_protocol_version":20,
@@ -64,8 +65,9 @@ public class BtnManagerTest {
 
         @Override
         public int postGzipJson(@NonNull String urlStr,
-                                @NonNull BtnSettings settings,
-                                @NonNull byte[] jsonBody) throws IOException {
+                                    @NonNull BtnSettings settings,
+                                    @NonNull byte[] jsonBody,
+                                    @Nullable java.util.Map<String, String> extraHeaders) throws IOException {
             posts.add(urlStr);
             return 200;
         }
