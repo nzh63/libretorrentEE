@@ -42,6 +42,7 @@ public class BtnRuleStore {
     private static final String KEY_DENYLIST = "denylist";
     private static final String KEY_ALLOWLIST = "allowlist";
     private static final String KEY_CLIENT_NAMES = "client_names";
+    private static final String KEY_PEER_IDS = "peer_ids";
     private static final String KEY_DENYLIST_REV = "denylist_rev";
     private static final String KEY_ALLOWLIST_REV = "allowlist_rev";
     private static final String KEY_PEER_IDENTITY_REV = "peer_identity_rev";
@@ -60,10 +61,17 @@ public class BtnRuleStore {
             if (rule != null)
                 clientNames.add(rule);
         }
+        List<BtnRuleSet.ClientNameRule> peerIds = new ArrayList<>();
+        for (String entry : prefs.getStringSet(KEY_PEER_IDS, new HashSet<>())) {
+            BtnRuleSet.ClientNameRule rule = BtnRuleSet.decodeRule(entry);
+            if (rule != null)
+                peerIds.add(rule);
+        }
         return new BtnRuleSet(
                 new HashSet<>(prefs.getStringSet(KEY_DENYLIST, new HashSet<>())),
                 new HashSet<>(prefs.getStringSet(KEY_ALLOWLIST, new HashSet<>())),
                 clientNames,
+                peerIds,
                 prefs.getString(KEY_DENYLIST_REV, ""),
                 prefs.getString(KEY_ALLOWLIST_REV, ""),
                 prefs.getString(KEY_PEER_IDENTITY_REV, ""));
@@ -73,11 +81,15 @@ public class BtnRuleStore {
         Set<String> encodedClientNames = new HashSet<>();
         for (BtnRuleSet.ClientNameRule rule : rules.clientNameRules)
             encodedClientNames.add(BtnRuleSet.encodeRule(rule));
+        Set<String> encodedPeerIds = new HashSet<>();
+        for (BtnRuleSet.ClientNameRule rule : rules.peerIdRules)
+            encodedPeerIds.add(BtnRuleSet.encodeRule(rule));
 
         prefs.edit()
                 .putStringSet(KEY_DENYLIST, new HashSet<>(rules.ipDenylist))
                 .putStringSet(KEY_ALLOWLIST, new HashSet<>(rules.ipAllowlist))
                 .putStringSet(KEY_CLIENT_NAMES, encodedClientNames)
+                .putStringSet(KEY_PEER_IDS, encodedPeerIds)
                 .putString(KEY_DENYLIST_REV, rules.denylistRev)
                 .putString(KEY_ALLOWLIST_REV, rules.allowlistRev)
                 .putString(KEY_PEER_IDENTITY_REV, rules.peerIdentityRev)

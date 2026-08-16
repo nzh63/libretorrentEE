@@ -29,7 +29,8 @@ import com.google.gson.JsonParser;
 /*
  * Parsed result of the BTN "让服务器配置你" (config) response. Extracts the
  * endpoints and intervals for the abilities we support: ip_denylist,
- * ip_allowlist, rule_peer_identity, submit_bans and submit_swarm.
+ * ip_allowlist, rule_peer_identity, submit_bans, submit_swarm, heartbeat,
+ * submit_histories (legacy peer-history reporting) and ip_query.
  */
 public class BtnConfig {
     public final int minProtocolVersion;
@@ -41,14 +42,23 @@ public class BtnConfig {
     @Nullable public final String peerIdentityEndpoint;
     @Nullable public final String submitBansEndpoint;
     @Nullable public final String submitSwarmEndpoint;
+    @Nullable public final String heartbeatEndpoint;
+    @Nullable public final String submitHistoryEndpoint;
+    @Nullable public final String ipQueryEndpoint;
+    /* Optional iframe widget for browsing an IP's BTN record in a browser */
+    @Nullable public final String ipQueryIframeEndpoint;
 
     /* Refresh intervals in ms (defaults per spec) */
     public final long ipDenylistInterval;
     public final long ipAllowlistInterval;
     public final long peerIdentityInterval;
+    public final long heartbeatInterval;
+    public final long submitHistoryInterval;
 
     public static final long DEFAULT_IP_LIST_INTERVAL = 600_000L; /* 10 min */
     public static final long DEFAULT_PEER_IDENTITY_INTERVAL = 2_700_000L; /* 45 min */
+    public static final long DEFAULT_HEARTBEAT_INTERVAL = 1_800_000L; /* 30 min */
+    public static final long DEFAULT_SUBMIT_HISTORY_INTERVAL = 1_800_000L; /* 30 min */
 
     private BtnConfig(int minProtocolVersion, int maxProtocolVersion,
                       @Nullable String ipDenylistEndpoint,
@@ -56,9 +66,15 @@ public class BtnConfig {
                       @Nullable String peerIdentityEndpoint,
                       @Nullable String submitBansEndpoint,
                       @Nullable String submitSwarmEndpoint,
+                      @Nullable String heartbeatEndpoint,
+                      @Nullable String submitHistoryEndpoint,
+                      @Nullable String ipQueryEndpoint,
+                      @Nullable String ipQueryIframeEndpoint,
                       long ipDenylistInterval,
                       long ipAllowlistInterval,
-                      long peerIdentityInterval) {
+                      long peerIdentityInterval,
+                      long heartbeatInterval,
+                      long submitHistoryInterval) {
         this.minProtocolVersion = minProtocolVersion;
         this.maxProtocolVersion = maxProtocolVersion;
         this.ipDenylistEndpoint = ipDenylistEndpoint;
@@ -66,13 +82,22 @@ public class BtnConfig {
         this.peerIdentityEndpoint = peerIdentityEndpoint;
         this.submitBansEndpoint = submitBansEndpoint;
         this.submitSwarmEndpoint = submitSwarmEndpoint;
+        this.heartbeatEndpoint = heartbeatEndpoint;
+        this.submitHistoryEndpoint = submitHistoryEndpoint;
+        this.ipQueryEndpoint = ipQueryEndpoint;
+        this.ipQueryIframeEndpoint = ipQueryIframeEndpoint;
         this.ipDenylistInterval = ipDenylistInterval;
         this.ipAllowlistInterval = ipAllowlistInterval;
         this.peerIdentityInterval = peerIdentityInterval;
+        this.heartbeatInterval = heartbeatInterval;
+        this.submitHistoryInterval = submitHistoryInterval;
     }
 
-    public static final BtnConfig INVALID = new BtnConfig(0, 0, null, null, null, null, null,
-            DEFAULT_IP_LIST_INTERVAL, DEFAULT_IP_LIST_INTERVAL, DEFAULT_PEER_IDENTITY_INTERVAL);
+    public static final BtnConfig INVALID = new BtnConfig(0, 0,
+            null, null, null, null, null, null, null, null, null,
+            DEFAULT_IP_LIST_INTERVAL, DEFAULT_IP_LIST_INTERVAL,
+            DEFAULT_PEER_IDENTITY_INTERVAL,
+            DEFAULT_HEARTBEAT_INTERVAL, DEFAULT_SUBMIT_HISTORY_INTERVAL);
 
     /*
      * Parses the config JSON body. Returns INVALID if unparseable or if the
@@ -103,14 +128,27 @@ public class BtnConfig {
         String peerIdentity = getEndpoint(ability, "rule_peer_identity");
         String submitBans = getEndpoint(ability, "submit_bans");
         String submitSwarm = getEndpoint(ability, "submit_swarm");
+        /*
+         * Per BTN-Spec/PeerBanHelper, these three abilities may be offered by
+         * servers of any protocol generation and are keyed "heartbeat",
+         * "submit_histories" (legacy naming) and "ip_query".
+         */
+        String heartbeat = getEndpoint(ability, "heartbeat");
+        String submitHistory = getEndpoint(ability, "submit_histories");
+        String ipQuery = getEndpoint(ability, "ip_query");
+        String ipQueryIframe = getOptionalString(ability, "ip_query", "iframe_endpoint");
 
         long denylistInterval = getInterval(ability, "ip_denylist", DEFAULT_IP_LIST_INTERVAL);
         long allowlistInterval = getInterval(ability, "ip_allowlist", DEFAULT_IP_LIST_INTERVAL);
         long peerIdentityInterval = getInterval(ability, "rule_peer_identity", DEFAULT_PEER_IDENTITY_INTERVAL);
+        long heartbeatInterval = getInterval(ability, "heartbeat", DEFAULT_HEARTBEAT_INTERVAL);
+        long submitHistoryInterval = getInterval(ability, "submit_histories", DEFAULT_SUBMIT_HISTORY_INTERVAL);
 
         return new BtnConfig(minV, maxV,
                 denylist, allowlist, peerIdentity, submitBans, submitSwarm,
-                denylistInterval, allowlistInterval, peerIdentityInterval);
+                heartbeat, submitHistory, ipQuery, ipQueryIframe,
+                denylistInterval, allowlistInterval, peerIdentityInterval,
+                heartbeatInterval, submitHistoryInterval);
     }
 
     private static int getInt(JsonObject obj, String key, int def) {
@@ -124,6 +162,17 @@ public class BtnConfig {
             JsonObject mod = ability.getAsJsonObject(key);
             if (mod.has("endpoint") && mod.get("endpoint").isJsonPrimitive())
                 return mod.get("endpoint").getAsString();
+        }
+        return null;
+    }
+
+    /* Reads a non-endpoint string field from an ability block, or null. */
+    @Nullable
+    private static String getOptionalString(JsonObject ability, String key, String field) {
+        if (ability.has(key) && ability.get(key).isJsonObject()) {
+            JsonObject mod = ability.getAsJsonObject(key);
+            if (mod.has(field) && mod.get(field).isJsonPrimitive())
+                return mod.get(field).getAsString();
         }
         return null;
     }

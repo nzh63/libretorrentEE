@@ -37,7 +37,7 @@ public class IpAddressBlacklistModuleTest {
         PbhSettings settings = PbhSettings.builder()
                 .ipCidrBlacklist(Collections.singleton("1.2.3.4"))
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 0, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 0, 0, 0, 0, 0);
 
         assertTrue(module.check(torrent, peer, settings).shouldBan());
     }
@@ -47,7 +47,7 @@ public class IpAddressBlacklistModuleTest {
         PbhSettings settings = PbhSettings.builder()
                 .ipCidrBlacklist(Collections.singleton("10.0.0.0/8"))
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("10.5.5.5", 6881, "client", 0, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("10.5.5.5", 6881, "client", "", 0, 0, 0, 0, 0);
 
         assertTrue(module.check(torrent, peer, settings).shouldBan());
     }
@@ -57,7 +57,7 @@ public class IpAddressBlacklistModuleTest {
         PbhSettings settings = PbhSettings.builder()
                 .ipCidrBlacklist(Collections.singleton("10.0.0.0/8"))
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("8.8.8.8", 6881, "client", 0, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("8.8.8.8", 6881, "client", "", 0, 0, 0, 0, 0);
 
         assertFalse(module.check(torrent, peer, settings).shouldBan());
     }
@@ -67,7 +67,7 @@ public class IpAddressBlacklistModuleTest {
         PbhSettings settings = PbhSettings.builder()
                 .ipCidrBlacklist(Collections.emptySet())
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 0, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 0, 0, 0, 0, 0);
 
         assertFalse(module.check(torrent, peer, settings).shouldBan());
     }

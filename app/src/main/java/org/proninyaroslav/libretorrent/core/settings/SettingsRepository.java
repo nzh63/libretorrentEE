@@ -197,6 +197,14 @@ public interface SettingsRepository
 
     void peerUserAgentBlacklist(Set<String> val);
 
+    /*
+     * Peer-id blacklist rules ("METHOD|content" or bare strings, matched by
+     * containment), equivalent of PBH's PeerIdBlacklist module
+     */
+    Set<String> peerIdBlacklist();
+
+    void peerIdBlacklist(Set<String> val);
+
     boolean showNatErrors();
 
     void showNatErrors(boolean val);
@@ -547,6 +555,22 @@ public interface SettingsRepository
 
     void pbhPcbFastPcbTestBlockingDuration(long val);
 
+    boolean pbhRangeBanEnabled();
+
+    void pbhRangeBanEnabled(boolean val);
+
+    int pbhRangeBanIpv4PrefixLength();
+
+    void pbhRangeBanIpv4PrefixLength(int val);
+
+    int pbhRangeBanIpv6PrefixLength();
+
+    void pbhRangeBanIpv6PrefixLength(int val);
+
+    long pbhRangeBanDuration();
+
+    void pbhRangeBanDuration(long val);
+
     /*
      * BTN (BitTorrent Threat Network) settings
      */
@@ -574,6 +598,10 @@ public interface SettingsRepository
     boolean btnSubmitSwarmEnabled();
 
     void btnSubmitSwarmEnabled(boolean val);
+
+    boolean btnSubmitHistoryEnabled();
+
+    void btnSubmitHistoryEnabled(boolean val);
 
     String btnInstallationId();
 

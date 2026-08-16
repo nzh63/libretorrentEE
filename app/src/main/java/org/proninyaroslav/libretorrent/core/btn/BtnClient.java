@@ -189,6 +189,80 @@ public class BtnClient {
         }
     }
 
+    /*
+     * Sends a heartbeat to the server (ability "heartbeat"). The body is
+     * {"ifaddr":"default"} - like upstream with multi_if disabled, the request
+     * always leaves through the default network interface. Returns the
+     * external IP the server observed in the response (may be an empty
+     * string), or null when the ability is missing or the request failed.
+     */
+    @Nullable
+    public String heartbeat(@NonNull BtnSettings settings,
+                            @NonNull BtnConfig config) {
+        if (config.heartbeatEndpoint == null || config.heartbeatEndpoint.isEmpty())
+            return null;
+        try {
+            byte[] body = "{\"ifaddr\":\"default\"}"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            BtnHttpClient.GetResult res =
+                    http.postJson(config.heartbeatEndpoint, settings, body);
+            if (res == null || !res.isSuccessful())
+                return null;
+            if (res.body == null || res.isNoContent())
+                return "";
+            String json = res.bodyAsUtf8();
+            if (json == null)
+                return "";
+            com.google.gson.JsonElement root =
+                    com.google.gson.JsonParser.parseString(json);
+            if (!root.isJsonObject())
+                return "";
+            com.google.gson.JsonObject obj = root.getAsJsonObject();
+            if (obj.has("external_ip") && obj.get("external_ip").isJsonPrimitive())
+                return obj.get("external_ip").getAsString();
+            return "";
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /*
+     * Submits peer history records (legacy ability "submit_histories") as a
+     * gzip JSON payload. Returns true on a 2xx response.
+     */
+    public boolean submitHistory(@NonNull BtnSettings settings,
+                                 @NonNull BtnConfig config,
+                                 @NonNull byte[] payload) {
+        if (config.submitHistoryEndpoint == null || config.submitHistoryEndpoint.isEmpty())
+            return false;
+        return submit(settings, config.submitHistoryEndpoint, payload);
+    }
+
+    /*
+     * Queries the BTN network's aggregated information about one IP
+     * (ability "ip_query"). Returns null when the ability is missing, the
+     * request failed or the body was unparseable.
+     */
+    @Nullable
+    public BtnIpQueryResult queryIp(@NonNull BtnSettings settings,
+                                    @NonNull BtnConfig config,
+                                    @NonNull String ip) {
+        if (config.ipQueryEndpoint == null || config.ipQueryEndpoint.isEmpty())
+            return null;
+        try {
+            String url = config.ipQueryEndpoint
+                    + (config.ipQueryEndpoint.contains("?") ? "&" : "?")
+                    + "ip=" + java.net.URLEncoder.encode(ip, "UTF-8");
+            BtnHttpClient.GetResult res = http.get(url, settings, null);
+            if (res == null || !res.isSuccessful() || res.body == null)
+                return null;
+            String body = res.bodyAsUtf8();
+            return body == null ? null : BtnIpQueryResult.parse(body);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /* Result of an IP list fetch. */
     public static class IpListResult {
         public final Set<String> ips;

@@ -85,6 +85,16 @@ public class BtnRuleModule implements BanModule {
             }
         }
 
+        if (!r.peerIdRules.isEmpty() && !peer.peerId.isEmpty()) {
+            for (BtnRuleSet.ClientNameRule rule : r.peerIdRules) {
+                if (rule.matches(peer.peerId)) {
+                    return BanResult.ban(name(), peer.ip,
+                            "peer id matches a BTN peer-identity rule ("
+                                    + rule.method + ")");
+                }
+            }
+        }
+
         return BanResult.pass(name(), peer.ip);
     }
 }

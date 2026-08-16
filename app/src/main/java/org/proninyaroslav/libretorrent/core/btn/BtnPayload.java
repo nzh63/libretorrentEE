@@ -101,6 +101,39 @@ public final class BtnPayload {
         return root.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    /*
+     * Builds the legacy submit_histories payload:
+     *  { "populate_time": <ms>, "peers": [ ... ] }
+     * (field names follow the PeerBanHelper LegacyBtnPeerHistory structure).
+     */
+    @NonNull
+    public static byte[] buildSubmitHistory(long populateTimeMs,
+                                            @NonNull Iterable<PeerHistoryEntry> peers) {
+        JsonObject root = new JsonObject();
+        root.addProperty("populate_time", populateTimeMs);
+        JsonArray arr = new JsonArray();
+        for (PeerHistoryEntry p : peers) {
+            JsonObject o = new JsonObject();
+            o.addProperty("ip_address", p.ipAddress);
+            o.addProperty("port", p.port);
+            o.addProperty("peer_id", p.peerId == null ? "" : p.peerId);
+            o.addProperty("client_name", p.clientName == null ? "" : p.clientName);
+            o.addProperty("torrent_identifier", p.torrentIdentifier);
+            o.addProperty("torrent_is_private", p.torrentIsPrivate);
+            o.addProperty("torrent_size", p.torrentSize);
+            o.addProperty("downloaded", p.downloaded);
+            o.addProperty("downloaded_offset", p.downloadedOffset);
+            o.addProperty("uploaded", p.uploaded);
+            o.addProperty("uploaded_offset", p.uploadedOffset);
+            o.addProperty("first_time_seen", p.firstTimeSeenMs);
+            o.addProperty("last_time_seen", p.lastTimeSeenMs);
+            o.addProperty("peer_flag", p.peerFlag == null ? "" : p.peerFlag);
+            arr.add(o);
+        }
+        root.add("peers", arr);
+        return root.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
     /* One ban entry for submit_bans. */
     public static class BanEntry {
         public long banAtMs;
@@ -145,5 +178,26 @@ public final class BtnPayload {
         public long uploadSpeed;
         public long downloadSpeedMax;
         public long uploadSpeedMax;
+    }
+
+    /*
+     * One peer-history record for the legacy submit_histories ability. Times
+     * are epoch milliseconds (serialized as numbers, matching PBH).
+     */
+    public static class PeerHistoryEntry {
+        public String ipAddress;
+        public int port;
+        public String peerId;
+        public String clientName;
+        public String torrentIdentifier;
+        public boolean torrentIsPrivate;
+        public long torrentSize;
+        public long downloaded;
+        public long downloadedOffset;
+        public long uploaded;
+        public long uploadedOffset;
+        public long firstTimeSeenMs;
+        public long lastTimeSeenMs;
+        public String peerFlag;
     }
 }

@@ -43,6 +43,57 @@ public class BtnConfigTest {
                     """;
 
     @Test
+    public void parsesExtraAbilities() {
+        String json =
+                """
+                {
+                  "min_protocol_version": 20,
+                  "max_protocol_version": 20,
+                  "ability": {
+                    "heartbeat": { "endpoint": "https://btn/heartbeat", "interval": 1800000,
+                                   "multi_if": true, "random_initial_delay": 3000 },
+                    "submit_histories": { "endpoint": "https://btn/submitHistory", "interval": 900000 },
+                    "ip_query": { "endpoint": "https://btn/queryIp", "pow_captcha": false,
+                                  "iframe_endpoint": "https://btn/queryIp/widget" }
+                  }
+                }
+                """;
+        BtnConfig cfg = BtnConfig.parse(json, 20);
+        assertEquals("https://btn/heartbeat", cfg.heartbeatEndpoint);
+        assertEquals(1800000, cfg.heartbeatInterval);
+        assertEquals("https://btn/submitHistory", cfg.submitHistoryEndpoint);
+        assertEquals(900000, cfg.submitHistoryInterval);
+        assertEquals("https://btn/queryIp", cfg.ipQueryEndpoint);
+        assertEquals("https://btn/queryIp/widget", cfg.ipQueryIframeEndpoint);
+    }
+
+    @Test
+    public void extraAbilitiesDefaultInterval_whenMissing() {
+        String json =
+                """
+                {
+                  "min_protocol_version": 20,
+                  "max_protocol_version": 20,
+                  "ability": {
+                    "heartbeat": { "endpoint": "https://btn/heartbeat" },
+                    "submit_histories": { "endpoint": "https://btn/submitHistory" }
+                  }
+                }
+                """;
+        BtnConfig cfg = BtnConfig.parse(json, 20);
+        assertEquals(BtnConfig.DEFAULT_HEARTBEAT_INTERVAL, cfg.heartbeatInterval);
+        assertEquals(BtnConfig.DEFAULT_SUBMIT_HISTORY_INTERVAL, cfg.submitHistoryInterval);
+    }
+
+    @Test
+    public void extraAbilitiesAbsent_nullEndpoints() {
+        assertNull(BtnConfig.parse(valid, 20).heartbeatEndpoint);
+        assertNull(BtnConfig.parse(valid, 20).submitHistoryEndpoint);
+        assertNull(BtnConfig.parse(valid, 20).ipQueryEndpoint);
+        assertNull(BtnConfig.parse(valid, 20).ipQueryIframeEndpoint);
+    }
+
+    @Test
     public void parsesEndpoints() {
         BtnConfig cfg = BtnConfig.parse(valid, 20);
         assertTrue(cfg != BtnConfig.INVALID);

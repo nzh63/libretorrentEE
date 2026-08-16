@@ -281,14 +281,33 @@
     <string name="peer_banned_by_ip_and_user_agent">IP and user agent added to blacklist, peer
         banned</string>
     <string name="peer_blacklist_ip_tab">IP</string>
+    <string name="peer_blacklist_peer_id_tab">Peer ID</string>
     <string name="peer_blacklist_user_agent_tab">User agent</string>
+    <string name="ban_records_tab">Ban records</string>
     <string name="empty_blacklist_ip">No banned IPs</string>
+    <string name="empty_blacklist_peer_id">No banned peer IDs</string>
     <string name="empty_blacklist_user_agent">No banned user agents</string>
+    <string name="empty_ban_records">No automatic bans</string>
     <string name="add_blacklist_ip_title">Add banned IP</string>
+    <string name="add_blacklist_peer_id_title">Add banned peer ID</string>
     <string name="add_blacklist_user_agent_title">Add banned user agent</string>
     <string name="blacklist_ip_hint">IP address, e.g. 192.168.1.1</string>
+    <string name="blacklist_peer_id_hint">Peer id rule, e.g. -xl or STARTS_WITH|-xl</string>
     <string name="blacklist_user_agent_hint">User agent, e.g. Transmission</string>
     <string name="invalid_ip">Invalid IP address</string>
+    <string name="unban">Unban</string>
+    <string name="ban_record_time">Banned %1$s · expires %2$s</string>
+    <string name="ban_record_permanent">permanent</string>
+    <string name="ban_record_detail_title">Ban record</string>
+    <string name="ban_record_detail_module">Module: %1$s</string>
+    <string name="ban_record_detail_reason">Reason: %1$s</string>
+    <string name="ban_record_detail_torrent">Torrent: %1$s</string>
+    <string name="ban_record_detail_banned_at">Banned at: %1$s</string>
+    <string name="ban_record_detail_expires_at">Expires at: %1$s</string>
+    <string name="btn_ip_query">BTN query</string>
+    <string name="btn_ip_query_running">Querying BTN…</string>
+    <string name="btn_ip_query_failed">BTN query failed or unavailable</string>
+    <string name="btn_ip_query_result">BTN: risk %1$s, labels: %2$s, bans: %3$d, downloading: %4$d, seeding: %5$d</string>
     <!-- PeerBanHelper-compatible anti-leech settings -->
     <string name="pref_pbh_category">PeerBanHelper anti-leech</string>
     <string name="pref_pbh_category_summary">Automatically ban malicious, leeching and abnormal
@@ -327,6 +346,14 @@
     <string name="pref_pbh_pcb_ipv6_prefix_length_title">IPv6 prefix length</string>
     <string name="pref_pbh_pcb_fast_pcb_test_percentage_title">Fast probe percentage</string>
     <string name="pref_pbh_pcb_fast_pcb_test_blocking_duration_title">Fast probe duration, ms</string>
+
+    <string name="pref_pbh_range_ban_title">Auto range ban</string>
+    <string name="pref_pbh_range_ban_summary">Also ban peers whose IP shares a prefix with an
+        already banned address (guilt by association).</string>
+    <string name="pref_pbh_range_ban_ipv4_prefix_length_title">Range ban IPv4 prefix</string>
+    <string name="pref_pbh_range_ban_ipv6_prefix_length_title">Range ban IPv6 prefix</string>
+    <string name="pref_pbh_range_ban_duration_title">Range ban duration, ms</string>
+    <string name="pref_pbh_range_ban_duration_summary">0 = permanent. Default 604800000 = 7 days.</string>
     <!-- BTN (BitTorrent Threat Network) settings -->
     <string name="pref_btn_category">BTN network</string>
     <string name="pref_btn_category_summary">Connect to a BitTorrent Threat Network (BTN) instance
@@ -344,7 +371,10 @@
     <string name="pref_btn_submit_swarm_title">Share swarm data</string>
     <string name="pref_btn_submit_swarm_summary">Submit your connected peer swarm data to the BTN
         server. Requires your consent.</string>
-    <string name="not_set">Not set</string>
+
+    <string name="pref_btn_submit_history_title">Submit peer history</string>
+    <string name="pref_btn_submit_history_summary">Periodically report the peers you have seen
+        to the BTN server (submit_histories).</string>    <string name="not_set">Not set</string>
     <string name="piece_map">Pieces map</string>
     <string name="resume_torrent">Resume</string>
     <string name="pause_torrent">Pause</string>

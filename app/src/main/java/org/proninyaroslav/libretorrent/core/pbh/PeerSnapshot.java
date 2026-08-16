@@ -33,6 +33,12 @@ public class PeerSnapshot {
     public final int port;
     /* Reported client name / user agent, may be empty */
     public final String client;
+    /*
+     * Raw 20-byte peer id decoded as ISO-8859-1 (one char per byte), the
+     * same representation PeerBanHelper matches its peer-id rules against;
+     * empty when unavailable
+     */
+    public final String peerId;
     /* Total bytes uploaded to this peer over the whole connection */
     public final long totalUpload;
     /* Total bytes downloaded from this peer over the whole connection */
@@ -47,6 +53,7 @@ public class PeerSnapshot {
     public PeerSnapshot(@NonNull String ip,
                         int port,
                         String client,
+                        String peerId,
                         long totalUpload,
                         long totalDownload,
                         int progressPpm,
@@ -55,6 +62,7 @@ public class PeerSnapshot {
         this.ip = Objects.requireNonNull(ip);
         this.port = port;
         this.client = client == null ? "" : client;
+        this.peerId = peerId == null ? "" : peerId;
         this.totalUpload = totalUpload;
         this.totalDownload = totalDownload;
         this.progressPpm = progressPpm;
@@ -85,12 +93,13 @@ public class PeerSnapshot {
                 && upSpeed == that.upSpeed
                 && downSpeed == that.downSpeed
                 && ip.equals(that.ip)
-                && client.equals(that.client);
+                && client.equals(that.client)
+                && peerId.equals(that.peerId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ip, port, client, totalUpload, totalDownload, progressPpm, upSpeed, downSpeed);
+        return Objects.hash(ip, port, client, peerId, totalUpload, totalDownload, progressPpm, upSpeed, downSpeed);
     }
 
     @Override
@@ -98,6 +107,7 @@ public class PeerSnapshot {
         return "PeerSnapshot{ip='" + ip + '\'' +
                 ", port=" + port +
                 ", client='" + client + '\'' +
+                ", peerId='" + peerId + '\'' +
                 ", totalUpload=" + totalUpload +
                 ", totalDownload=" + totalDownload +
                 ", progressPpm=" + progressPpm +

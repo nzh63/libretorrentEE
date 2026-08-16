@@ -301,6 +301,12 @@
     <string name="pref_pbh_pcb_ipv6_prefix_length_title">IPv6 前缀长度</string>
     <string name="pref_pbh_pcb_fast_pcb_test_percentage_title">快速探测百分比</string>
     <string name="pref_pbh_pcb_fast_pcb_test_blocking_duration_title">快速探测时长（毫秒）</string>
+    <string name="pref_pbh_range_ban_title">自动连坐（Auto Range Ban）</string>
+    <string name="pref_pbh_range_ban_summary">同时封禁与已封禁 IP 位于相同前缀网段的节点。</string>
+    <string name="pref_pbh_range_ban_ipv4_prefix_length_title">连坐 IPv4 前缀长度</string>
+    <string name="pref_pbh_range_ban_ipv6_prefix_length_title">连坐 IPv6 前缀长度</string>
+    <string name="pref_pbh_range_ban_duration_title">连坐封禁时长（毫秒）</string>
+    <string name="pref_pbh_range_ban_duration_summary">0 = 永久。默认 604800000 = 7 天。</string>
     <string name="pref_btn_category">BTN 网络</string>
     <string name="pref_btn_category_summary">连接 BitTorrent 威胁网络（BTN）实例，共享和接收节点封禁列表与种群数据。兼容 BTN-Spec
         协议。</string>
@@ -314,6 +320,8 @@
     <string name="pref_btn_submit_bans_summary">将当前封禁列表提交到 BTN 服务器。需要您的同意。</string>
     <string name="pref_btn_submit_swarm_title">共享种群数据</string>
     <string name="pref_btn_submit_swarm_summary">将连接的节点种群数据提交到 BTN 服务器。需要您的同意。</string>
+    <string name="pref_btn_submit_history_title">提交节点历史</string>
+    <string name="pref_btn_submit_history_summary">定期将您见过的节点上报给 BTN 服务器（submit_histories）。需要您的同意。</string>
     <string name="not_set">未设置</string>
     <string name="piece_map">区块图</string>
     <string name="resume_torrent">继续</string>
@@ -444,6 +452,25 @@
     <string name="pref_header_streaming">流媒体</string>
     <!-- Anti-leech tabs -->
     <string name="anti_leech_pbh_tab">PBH/BTN</string>
+    <string name="peer_blacklist_peer_id_tab">Peer ID</string>
+    <string name="ban_records_tab">封禁记录</string>
+    <string name="empty_blacklist_peer_id">暂无封禁的 Peer ID</string>
+    <string name="empty_ban_records">暂无自动封禁</string>
+    <string name="add_blacklist_peer_id_title">添加封禁的 Peer ID</string>
+    <string name="blacklist_peer_id_hint">Peer ID 规则，例如 -xl 或 STARTS_WITH|-xl</string>
+    <string name="unban">解封</string>
+    <string name="ban_record_time">封禁于 %1$s · 到期 %2$s</string>
+    <string name="ban_record_permanent">永久</string>
+    <string name="ban_record_detail_title">封禁记录</string>
+    <string name="ban_record_detail_module">封禁模块：%1$s</string>
+    <string name="ban_record_detail_reason">原因：%1$s</string>
+    <string name="ban_record_detail_torrent">种子：%1$s</string>
+    <string name="ban_record_detail_banned_at">封禁时间：%1$s</string>
+    <string name="ban_record_detail_expires_at">到期时间：%1$s</string>
+    <string name="btn_ip_query">BTN 查询</string>
+    <string name="btn_ip_query_running">正在查询 BTN…</string>
+    <string name="btn_ip_query_failed">BTN 查询失败或不可用</string>
+    <string name="btn_ip_query_result">BTN：风险 %1$s，标签：%2$s，封禁次数：%3$d，下载数：%4$d，做种数：%5$d</string>
     <!-- Storage settings -->
     <string name="pref_save_torrents_in_title">将种子保存于…</string>
     <string name="pref_move_after_download_title">下载完成后移动文件</string>

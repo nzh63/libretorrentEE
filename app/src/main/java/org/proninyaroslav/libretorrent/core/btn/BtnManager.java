@@ -39,6 +39,8 @@ public class BtnManager {
     private long lastDenylistFetchMs;
     private long lastAllowlistFetchMs;
     private long lastPeerIdentityFetchMs;
+    private long lastHeartbeatMs;
+    private long lastHistorySubmitMs;
 
     public BtnManager(@NonNull BtnClient client, @NonNull BtnRuleStore store) {
         this.client = client;
@@ -82,6 +84,8 @@ public class BtnManager {
         java.util.Set<String> allowlist = new java.util.HashSet<>(base.ipAllowlist);
         java.util.List<BtnRuleSet.ClientNameRule> clientNames =
                 new java.util.ArrayList<>(base.clientNameRules);
+        java.util.List<BtnRuleSet.ClientNameRule> peerIds =
+                new java.util.ArrayList<>(base.peerIdRules);
         String denylistRev = base.denylistRev;
         String allowlistRev = base.allowlistRev;
         String peerIdentityRev = base.peerIdentityRev;
@@ -111,6 +115,7 @@ public class BtnManager {
             BtnRuleSet res = client.fetchPeerIdentityRules(settings, config, peerIdentityRev);
             if (res != null) {
                 clientNames = new java.util.ArrayList<>(res.clientNameRules);
+                peerIds = new java.util.ArrayList<>(res.peerIdRules);
                 denylist.addAll(res.ipDenylist);
                 peerIdentityRev = res.peerIdentityRev;
                 lastPeerIdentityFetchMs = now;
@@ -118,10 +123,32 @@ public class BtnManager {
         }
 
         BtnRuleSet merged = new BtnRuleSet(
-                denylist, allowlist, clientNames,
+                denylist, allowlist, clientNames, peerIds,
                 denylistRev, allowlistRev, peerIdentityRev);
         store.save(merged);
         return merged;
+    }
+
+    /*
+     * Sends a heartbeat on the interval advertised by the server's heartbeat
+     * ability. Returns the external IP seen by the server (possibly empty),
+     * or null when no heartbeat was due / the ability is unavailable / the
+     * request failed. Callers may invoke this on every refresh cycle.
+     *
+     * NOTE: performs network I/O and MUST NOT be called from the main thread.
+     */
+    @Nullable
+    public synchronized String heartbeat(@NonNull BtnSettings settings, long nowMs) {
+        if (!settings.complete())
+            return null;
+        if (config == null || config == BtnConfig.INVALID)
+            return null;
+        if (config.heartbeatEndpoint == null || config.heartbeatEndpoint.isEmpty())
+            return null;
+        if (nowMs - lastHeartbeatMs < config.heartbeatInterval)
+            return null;
+        lastHeartbeatMs = nowMs;
+        return client.heartbeat(settings, config);
     }
 
     public void clear() {
@@ -131,6 +158,8 @@ public class BtnManager {
         lastDenylistFetchMs = 0;
         lastAllowlistFetchMs = 0;
         lastPeerIdentityFetchMs = 0;
+        lastHeartbeatMs = 0;
+        lastHistorySubmitMs = 0;
     }
 
     /*
@@ -177,5 +206,63 @@ public class BtnManager {
         if (config.submitSwarmEndpoint == null || config.submitSwarmEndpoint.isEmpty())
             return false;
         return client.submitSwarm(settings, config, BtnPayload.buildSubmitSwarm(swarm));
+    }
+
+    /*
+     * Submits peer history records to the legacy submit_histories ability,
+     * rate-limited by the interval from the server config. Returns true when
+     * a submission was due and the server acknowledged it. Entries are split
+     * into requests of at most 1000 records.
+     *
+     * NOTE: performs network I/O and MUST NOT be called from the main thread.
+     */
+    public boolean submitHistory(@NonNull BtnSettings settings,
+                                 @NonNull java.util.List<BtnPayload.PeerHistoryEntry> peers) {
+        if (!settings.complete() || !settings.submitHistoryEnabled)
+            return false;
+        if (peers.isEmpty())
+            return false;
+        if (config == null || config == BtnConfig.INVALID) {
+            config = client.fetchConfig(settings);
+            if (config == null || config == BtnConfig.INVALID)
+                return false;
+        }
+        if (config.submitHistoryEndpoint == null || config.submitHistoryEndpoint.isEmpty())
+            return false;
+
+        long now = System.currentTimeMillis();
+        if (now - lastHistorySubmitMs < config.submitHistoryInterval)
+            return false;
+        lastHistorySubmitMs = now;
+
+        boolean submitted = false;
+        for (int i = 0; i < peers.size(); i += 1000) {
+            java.util.List<BtnPayload.PeerHistoryEntry> batch =
+                    peers.subList(i, Math.min(i + 1000, peers.size()));
+            boolean ok = client.submitHistory(settings, config,
+                    BtnPayload.buildSubmitHistory(now, batch));
+            submitted |= ok;
+        }
+        return submitted;
+    }
+
+    /*
+     * Queries the BTN network's aggregated information about one IP via the
+     * ip_query ability. Returns null when BTN is disabled, the ability is
+     * unavailable or the request failed.
+     *
+     * NOTE: performs network I/O and MUST NOT be called from the main thread.
+     */
+    @Nullable
+    public synchronized BtnIpQueryResult queryIp(@NonNull BtnSettings settings,
+                                                 @NonNull String ip) {
+        if (!settings.complete())
+            return null;
+        if (config == null || config == BtnConfig.INVALID) {
+            config = client.fetchConfig(settings);
+            if (config == null || config == BtnConfig.INVALID)
+                return null;
+        }
+        return client.queryIp(settings, config, ip);
     }
 }

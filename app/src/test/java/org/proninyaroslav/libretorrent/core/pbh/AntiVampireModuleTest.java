@@ -38,7 +38,7 @@ public class AntiVampireModuleTest {
                 .antiVampireUploadThreshold(100)
                 .antiVampireMinProgressPpm(1000)
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 10_000, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 10_000, 0, 0, 0, 0);
 
         BanResult result = module.check(torrent, peer, settings);
 
@@ -52,7 +52,7 @@ public class AntiVampireModuleTest {
                 .antiVampireUploadThreshold(100)
                 .antiVampireMinProgressPpm(1000)
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 50, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 50, 0, 0, 0, 0);
 
         assertFalse(module.check(torrent, peer, settings).shouldBan());
     }
@@ -64,7 +64,7 @@ public class AntiVampireModuleTest {
                 .antiVampireMinProgressPpm(1000)
                 .build();
         // 50% progress reported -> not a vampire
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 10_000, 0, 500_000, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 10_000, 0, 500_000, 0, 0);
 
         assertFalse(module.check(torrent, peer, settings).shouldBan());
     }
@@ -75,7 +75,7 @@ public class AntiVampireModuleTest {
                 .antiVampireUploadThreshold(100)
                 .antiVampireMinProgressPpm(1000)
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 100, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 100, 0, 0, 0, 0);
 
         // upload == threshold, not strictly greater -> pass
         assertFalse(module.check(torrent, peer, settings).shouldBan());
@@ -88,7 +88,7 @@ public class AntiVampireModuleTest {
                 .antiVampireUploadThreshold(100)
                 .antiVampireMinProgressPpm(1000)
                 .build();
-        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", 10_000, 0, 0, 0, 0);
+        PeerSnapshot peer = new PeerSnapshot("1.2.3.4", 6881, "client", "", 10_000, 0, 0, 0, 0);
 
         assertFalse(module.check(torrent, peer, settings).shouldBan());
     }

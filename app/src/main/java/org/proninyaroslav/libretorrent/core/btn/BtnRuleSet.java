@@ -36,9 +36,9 @@ import java.util.regex.Pattern;
  * Holds the set of rules fetched from a BTN instance:
  *  - IP denylist (peers to ban) and allowlist (peers to exempt);
  *  - IP CIDR sets from the peer-identity cloud rules;
- *  - client-name rules from the peer-identity cloud rules, including their
- *    match method (STARTS_WITH / ENDS_WITH / CONTAINS / EQUALS / REGEX /
- *    LENGTH), mirroring PeerBanHelper's RuleParser.
+ *  - client-name and peer-id rules from the peer-identity cloud rules,
+ *    including their match method (STARTS_WITH / ENDS_WITH / CONTAINS /
+ *    EQUALS / REGEX / LENGTH), mirroring PeerBanHelper's RuleParser.
  *
  * The BTN-Spec defines these as plain lines (for the allow/deny lists) or as
  * a JSON structure (rule_peer_identity). This container is agnostic to the
@@ -51,35 +51,42 @@ public class BtnRuleSet {
     public final Set<String> ipAllowlist;
     /* Client-name rules to ban, from cloud rules */
     public final List<ClientNameRule> clientNameRules;
+    /* Peer-id rules to ban, from cloud rules */
+    public final List<ClientNameRule> peerIdRules;
     /* Content version tokens for incremental refresh ("" = never fetched) */
     public final String denylistRev;
     public final String allowlistRev;
     public final String peerIdentityRev;
 
     public static final BtnRuleSet EMPTY = new BtnRuleSet(
-            Collections.emptySet(), Collections.emptySet(), Collections.emptyList(),
+            Collections.emptySet(), Collections.emptySet(),
+            Collections.emptyList(), Collections.emptyList(),
             "", "", "");
 
     public BtnRuleSet(@NonNull Set<String> ipDenylist,
                       @NonNull Set<String> ipAllowlist,
                       @NonNull List<ClientNameRule> clientNameRules,
+                      @NonNull List<ClientNameRule> peerIdRules,
                       @NonNull String denylistRev,
                       @NonNull String allowlistRev,
                       @NonNull String peerIdentityRev) {
         this.ipDenylist = Collections.unmodifiableSet(new HashSet<>(ipDenylist));
         this.ipAllowlist = Collections.unmodifiableSet(new HashSet<>(ipAllowlist));
         this.clientNameRules = Collections.unmodifiableList(new ArrayList<>(clientNameRules));
+        this.peerIdRules = Collections.unmodifiableList(new ArrayList<>(peerIdRules));
         this.denylistRev = denylistRev;
         this.allowlistRev = allowlistRev;
         this.peerIdentityRev = peerIdentityRev;
     }
 
     public boolean isEmpty() {
-        return ipDenylist.isEmpty() && ipAllowlist.isEmpty() && clientNameRules.isEmpty();
+        return ipDenylist.isEmpty() && ipAllowlist.isEmpty()
+                && clientNameRules.isEmpty() && peerIdRules.isEmpty();
     }
 
     /*
-     * A single client-name match rule from the BTN peer-identity rules.
+     * A single typed match rule from the BTN peer-identity rules. Despite the
+     * historic name it is used for both client-name and peer-id rules.
      * String methods compare case-insensitively.
      */
     public static final class ClientNameRule {

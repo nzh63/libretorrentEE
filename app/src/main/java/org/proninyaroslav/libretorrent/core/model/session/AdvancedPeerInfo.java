@@ -21,7 +21,10 @@ package org.proninyaroslav.libretorrent.core.model.session;
 
 import org.libtorrent4j.PeerInfo;
 import org.libtorrent4j.PieceIndexBitfield;
+import org.libtorrent4j.swig.byte_vector;
 import org.libtorrent4j.swig.peer_info;
+
+import java.nio.charset.StandardCharsets;
 
 /*
  * Extension of org.libtorrent4j.PeerInfo class with additional information
@@ -32,6 +35,12 @@ public class AdvancedPeerInfo extends PeerInfo
     protected int port;
     protected PieceIndexBitfield pieces;
     protected boolean isUtp;
+    /*
+     * The raw 20-byte peer id decoded as ISO-8859-1 (one char per byte) -
+     * the same representation PeerBanHelper matches its peer-id rules
+     * against. The base PeerInfo class does not expose the pid at all.
+     */
+    protected String peerId;
 
     public AdvancedPeerInfo(peer_info p)
     {
@@ -40,11 +49,27 @@ public class AdvancedPeerInfo extends PeerInfo
         port = p.remote_endpoint().port();
         pieces = new PieceIndexBitfield(p.get_pieces());
         isUtp = p.getFlags().and_(peer_info.utp_socket).non_zero();
+        peerId = decodePid(p.getPid().to_bytes());
+    }
+
+    private static String decodePid(byte_vector pid)
+    {
+        if (pid == null)
+            return "";
+        byte[] bytes = new byte[pid.size()];
+        for (int i = 0; i < bytes.length; i++)
+            bytes[i] = pid.get(i);
+        return new String(bytes, StandardCharsets.ISO_8859_1);
     }
 
     public int port()
     {
         return port;
+    }
+
+    public String peerId()
+    {
+        return peerId;
     }
 
     /*

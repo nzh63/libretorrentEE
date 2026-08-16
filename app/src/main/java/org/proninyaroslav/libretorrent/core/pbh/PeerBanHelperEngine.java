@@ -42,27 +42,34 @@ public class PeerBanHelperEngine {
     private final BtnRuleModule btnRuleModule;
     @Nullable
     private final ProgressCheatModule progressCheatModule;
+    @Nullable
+    private final AutoRangeBanModule rangeBanModule;
 
     public PeerBanHelperEngine() {
         this.btnRuleModule = new BtnRuleModule();
         this.progressCheatModule = new ProgressCheatModule();
+        this.rangeBanModule = new AutoRangeBanModule();
         this.modules = new ArrayList<>();
         this.modules.add(progressCheatModule);
         this.modules.add(new AntiVampireModule());
         this.modules.add(new IpAddressBlacklistModule());
+        this.modules.add(new PeerIdBlacklistModule());
         this.modules.add(btnRuleModule);
+        this.modules.add(rangeBanModule);
     }
 
     public PeerBanHelperEngine(List<BanModule> modules) {
         this.btnRuleModule = new BtnRuleModule();
         ProgressCheatModule pcb = null;
+        AutoRangeBanModule rangeBan = null;
         for (BanModule m : modules) {
-            if (m instanceof ProgressCheatModule) {
+            if (m instanceof ProgressCheatModule)
                 pcb = (ProgressCheatModule) m;
-                break;
-            }
+            if (m instanceof AutoRangeBanModule)
+                rangeBan = (AutoRangeBanModule) m;
         }
         this.progressCheatModule = pcb;
+        this.rangeBanModule = rangeBan;
         this.modules = new ArrayList<>(modules);
     }
 
@@ -102,6 +109,19 @@ public class PeerBanHelperEngine {
     public void evictTorrentState(String torrentId) {
         if (progressCheatModule != null)
             progressCheatModule.evictTorrent(torrentId);
+    }
+
+    /*
+     * Feeds the currently banned addresses (manual + active auto bans, without
+     * disconnect probes) to the AutoRangeBan module before an engine pass.
+     * No-op when no AutoRangeBan module is configured.
+     */
+    public void updateRangeBanAddresses(@NonNull Set<String> bannedIps,
+                                        @NonNull PbhSettings settings) {
+        if (rangeBanModule != null)
+            rangeBanModule.updateBannedAddresses(bannedIps,
+                    settings.rangeBanIpv4PrefixLength,
+                    settings.rangeBanIpv6PrefixLength);
     }
 
     /*

@@ -46,10 +46,9 @@ import java.util.Set;
  *  }
  *
  * We extract:
- *  - client-name rules with their match method
+ *  - peer-id and client-name rules with their match method
  *    (STARTS_WITH / ENDS_WITH / CONTAINS / EQUALS / REGEX / LENGTH);
  *  - IP CIDR blocks -> ban by IP.
- * peer_id rules are ignored because libtorrent4j does not expose peer_id.
  */
 public final class BtnPeerIdentityParser {
     private BtnPeerIdentityParser() {
@@ -57,13 +56,14 @@ public final class BtnPeerIdentityParser {
 
     /*
      * Parses the JSON body and returns a BtnRuleSet holding the extracted IP
-     * denylist and client-name rules. The returned rev is taken from the
-     * top-level "version" field.
+     * denylist and peer-id/client-name rules. The returned rev is taken from
+     * the top-level "version" field.
      */
     @NonNull
     public static BtnRuleSet parse(@NonNull String body) {
         Set<String> ips = new HashSet<>();
         Set<BtnRuleSet.ClientNameRule> clientNames = new HashSet<>();
+        Set<BtnRuleSet.ClientNameRule> peerIds = new HashSet<>();
         String rev = "";
 
         JsonElement root;
@@ -83,12 +83,17 @@ public final class BtnPeerIdentityParser {
         if (obj.has("ip") && obj.get("ip").isJsonObject()) {
             collectIpRules(obj.getAsJsonObject("ip"), ips);
         }
+        if (obj.has("peer_id") && obj.get("peer_id").isJsonObject()) {
+            collectMatchRules(obj.getAsJsonObject("peer_id"), peerIds);
+        }
         if (obj.has("client_name") && obj.get("client_name").isJsonObject()) {
-            collectClientNameRules(obj.getAsJsonObject("client_name"), clientNames);
+            collectMatchRules(obj.getAsJsonObject("client_name"), clientNames);
         }
 
         return new BtnRuleSet(ips, new HashSet<>(),
-                new java.util.ArrayList<>(clientNames), "", "", rev);
+                new java.util.ArrayList<>(clientNames),
+                new java.util.ArrayList<>(peerIds),
+                "", "", rev);
     }
 
     private static void collectIpRules(JsonObject ipObj, Set<String> out) {
@@ -106,9 +111,9 @@ public final class BtnPeerIdentityParser {
         }
     }
 
-    private static void collectClientNameRules(JsonObject cnObj,
-                                               Set<BtnRuleSet.ClientNameRule> out) {
-        for (Map.Entry<String, JsonElement> e : cnObj.entrySet()) {
+    private static void collectMatchRules(JsonObject ruleObj,
+                                           Set<BtnRuleSet.ClientNameRule> out) {
+        for (Map.Entry<String, JsonElement> e : ruleObj.entrySet()) {
             JsonElement value = e.getValue();
             if (!value.isJsonArray())
                 continue;

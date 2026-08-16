@@ -895,6 +895,14 @@ class TorrentDownloadImpl implements TorrentDownload {
         return infoList;
     }
 
+    @Override
+    public List<AdvancedPeerInfo> getAdvancedPeerInfoList() {
+        if (operationNotAllowed())
+            return new ArrayList<>();
+
+        return advancedPeerInfo();
+    }
+
     /*
      * This function is similar as TorrentHandle::peerInfo()
      */

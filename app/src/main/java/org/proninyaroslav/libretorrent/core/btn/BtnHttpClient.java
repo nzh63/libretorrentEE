@@ -183,6 +183,55 @@ public class BtnHttpClient {
         }
     }
 
+    /*
+     * POSTs a plain (uncompressed) JSON body, e.g. for the heartbeat ability.
+     * Returns the status code plus the (decompressed) response body, or null
+     * on I/O error. Redirects after a POST are followed with a GET (without
+     * the body) except 307/308, which re-POST it.
+     */
+    @Nullable
+    public GetResult postJson(@NonNull String urlStr,
+                              @NonNull BtnSettings settings,
+                              @NonNull byte[] jsonBody) throws IOException {
+        String current = urlStr;
+        boolean rePostBody = true;
+        for (int redirects = 0; ; redirects++) {
+            if (redirects > MAX_REDIRECTS)
+                return null;
+            HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            conn.setReadTimeout(READ_TIMEOUT_MS);
+            conn.setRequestMethod(rePostBody ? "POST" : "GET");
+            applyAuthHeaders(conn, settings);
+            conn.setRequestProperty("Accept-Encoding", "gzip");
+            if (rePostBody) {
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(jsonBody);
+                    os.flush();
+                }
+            }
+            int code = conn.getResponseCode();
+            if (isRedirect(code)) {
+                String location = conn.getHeaderField("Location");
+                conn.disconnect();
+                if (location == null)
+                    return null;
+                if (code != 307 && code != 308)
+                    rePostBody = false;
+                current = new URL(new URL(current), location).toString();
+                continue;
+            }
+            byte[] body = (code >= 200 && code < 300) ? readBody(conn) : readError(conn);
+            String contentEncoding = conn.getHeaderField("Content-Encoding");
+            conn.disconnect();
+            body = maybeDecompress(body, contentEncoding);
+            return new GetResult(code, body, null);
+        }
+    }
+
     private void applyAuthHeaders(@NonNull HttpURLConnection conn, @NonNull BtnSettings s) {
         if (s.appId != null && !s.appId.isEmpty())
             conn.setRequestProperty("X-BTN-AppID", s.appId);

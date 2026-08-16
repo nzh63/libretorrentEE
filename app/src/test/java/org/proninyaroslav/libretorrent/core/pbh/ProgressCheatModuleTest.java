@@ -35,7 +35,7 @@ public class ProgressCheatModuleTest {
     private final long size = 100L * 1024 * 1024; /* 100 MiB */
 
     private PeerSnapshot peer(String ip, long uploaded, int progressPpm, int upSpeed) {
-        return new PeerSnapshot(ip, 6881, "client", uploaded, 0, progressPpm, upSpeed, 0);
+        return new PeerSnapshot(ip, 6881, "client", "", uploaded, 0, progressPpm, upSpeed, 0);
     }
 
     private TorrentSnapshot torrent() {

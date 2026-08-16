@@ -127,11 +127,26 @@ public class SettingsRepositoryImpl implements SettingsRepository {
         static final int pbhPcbIpv6PrefixLength = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_IPV6_PREFIX_LENGTH;
         static final double pbhPcbFastPcbTestPercentage = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_FAST_PCB_TEST_PERCENTAGE;
         static final long pbhPcbFastPcbTestBlockingDuration = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_PCB_FAST_PCB_TEST_BLOCKING_DURATION_MS;
+        /* AutoRangeBan defaults (upstream PeerBanHelper profile.yml) */
+        static final boolean pbhRangeBanEnabled = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_RANGE_BAN_ENABLED;
+        static final int pbhRangeBanIpv4PrefixLength = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_RANGE_BAN_IPV4_PREFIX_LENGTH;
+        static final int pbhRangeBanIpv6PrefixLength = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_RANGE_BAN_IPV6_PREFIX_LENGTH;
+        static final long pbhRangeBanDuration = org.proninyaroslav.libretorrent.core.pbh.PbhSettings.DEFAULT_RANGE_BAN_DURATION_MS;
+        /*
+         * Peer-id blacklist preset from upstream PeerBanHelper's profile.yml
+         * ("banned-peer-id"); encoded as "METHOD|content" rule strings.
+         */
+        static final java.util.Set<String> peerIdBlacklist = new java.util.HashSet<>(java.util.Arrays.asList(
+                "STARTS_WITH|-hp", "STARTS_WITH|-xm", "STARTS_WITH|-dt", "CONTAINS|-rn0.0.0",
+                "STARTS_WITH|-sd", "STARTS_WITH|-xf", "STARTS_WITH|-qd", "STARTS_WITH|-bn",
+                "STARTS_WITH|-dl", "STARTS_WITH|-ts", "STARTS_WITH|-fg", "STARTS_WITH|-tt",
+                "STARTS_WITH|-nx", "CONTAINS|cacao", "EQUALS|Unknown", "EQUALS|Unknown"));
 
         /* BTN defaults: off until the user opts in; config URL is pre-filled */
         static final boolean btnEnabled = false;
         static final boolean btnSubmitBansEnabled = false;
         static final boolean btnSubmitSwarmEnabled = false;
+        static final boolean btnSubmitHistoryEnabled = false;
         static final String btnConfigUrl = "https://sparkle.pbh-btn.com/ping/config";
 
         /* Storage settings */
@@ -824,6 +839,24 @@ public class SettingsRepositoryImpl implements SettingsRepository {
     }
 
     @Override
+    public Set<String> peerIdBlacklist() {
+        return new HashSet<>(pref.getStringSet(
+                appContext.getString(R.string.pref_key_peer_id_blacklist),
+                Default.peerIdBlacklist
+        ));
+    }
+
+    @Override
+    public void peerIdBlacklist(Set<String> val) {
+        pref.edit()
+                .putStringSet(
+                        appContext.getString(R.string.pref_key_peer_id_blacklist),
+                        new HashSet<>(val)
+                )
+                .apply();
+    }
+
+    @Override
     public Set<String> pbhAutoBannedIps() {
         return new HashSet<>(pref.getStringSet(
                 appContext.getString(R.string.pref_key_pbh_auto_banned_ips),
@@ -1077,6 +1110,58 @@ public class SettingsRepositoryImpl implements SettingsRepository {
                 .apply();
     }
 
+    @Override
+    public boolean pbhRangeBanEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_pbh_range_ban_enabled),
+                Default.pbhRangeBanEnabled);
+    }
+
+    @Override
+    public void pbhRangeBanEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_pbh_range_ban_enabled), val)
+                .apply();
+    }
+
+    @Override
+    public int pbhRangeBanIpv4PrefixLength() {
+        return pref.getInt(appContext.getString(R.string.pref_key_pbh_range_ban_ipv4_prefix_length),
+                Default.pbhRangeBanIpv4PrefixLength);
+    }
+
+    @Override
+    public void pbhRangeBanIpv4PrefixLength(int val) {
+        pref.edit()
+                .putInt(appContext.getString(R.string.pref_key_pbh_range_ban_ipv4_prefix_length), val)
+                .apply();
+    }
+
+    @Override
+    public int pbhRangeBanIpv6PrefixLength() {
+        return pref.getInt(appContext.getString(R.string.pref_key_pbh_range_ban_ipv6_prefix_length),
+                Default.pbhRangeBanIpv6PrefixLength);
+    }
+
+    @Override
+    public void pbhRangeBanIpv6PrefixLength(int val) {
+        pref.edit()
+                .putInt(appContext.getString(R.string.pref_key_pbh_range_ban_ipv6_prefix_length), val)
+                .apply();
+    }
+
+    @Override
+    public long pbhRangeBanDuration() {
+        return pref.getLong(appContext.getString(R.string.pref_key_pbh_range_ban_duration),
+                Default.pbhRangeBanDuration);
+    }
+
+    @Override
+    public void pbhRangeBanDuration(long val) {
+        pref.edit()
+                .putLong(appContext.getString(R.string.pref_key_pbh_range_ban_duration), val)
+                .apply();
+    }
+
     /* ---- BTN (BitTorrent Threat Network) settings ---- */
 
     @Override
@@ -1152,6 +1237,19 @@ public class SettingsRepositoryImpl implements SettingsRepository {
     public void btnSubmitSwarmEnabled(boolean val) {
         pref.edit()
                 .putBoolean(appContext.getString(R.string.pref_key_btn_submit_swarm), val)
+                .apply();
+    }
+
+    @Override
+    public boolean btnSubmitHistoryEnabled() {
+        return pref.getBoolean(appContext.getString(R.string.pref_key_btn_submit_history),
+                Default.btnSubmitHistoryEnabled);
+    }
+
+    @Override
+    public void btnSubmitHistoryEnabled(boolean val) {
+        pref.edit()
+                .putBoolean(appContext.getString(R.string.pref_key_btn_submit_history), val)
                 .apply();
     }
 

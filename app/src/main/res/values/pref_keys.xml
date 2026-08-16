@@ -91,6 +91,7 @@
     <string name="pref_key_enable_ip_filtering" translatable="false">pref_key_enable_ip_filtering</string>
     <string name="pref_key_ip_filtering_file" translatable="false">pref_key_ip_filtering_file</string>
     <string name="pref_key_peer_ip_blacklist" translatable="false">pref_key_peer_ip_blacklist</string>
+    <string name="pref_key_peer_id_blacklist" translatable="false">pref_key_peer_id_blacklist</string>
     <string name="pref_key_peer_user_agent_blacklist" translatable="false">
         pref_key_peer_user_agent_blacklist</string>
     <!-- PeerBanHelper-compatible anti-leech settings -->
@@ -122,6 +123,12 @@
         pref_key_pbh_pcb_ipv4_prefix_length</string>
     <string name="pref_key_pbh_pcb_ipv6_prefix_length" translatable="false">
         pref_key_pbh_pcb_ipv6_prefix_length</string>
+    <string name="pref_key_pbh_range_ban_enabled" translatable="false">pref_key_pbh_range_ban_enabled</string>
+    <string name="pref_key_pbh_range_ban_ipv4_prefix_length" translatable="false">
+        pref_key_pbh_range_ban_ipv4_prefix_length</string>
+    <string name="pref_key_pbh_range_ban_ipv6_prefix_length" translatable="false">
+        pref_key_pbh_range_ban_ipv6_prefix_length</string>
+    <string name="pref_key_pbh_range_ban_duration" translatable="false">pref_key_pbh_range_ban_duration</string>
     <string name="pref_key_pbh_pcb_fast_pcb_test_percentage" translatable="false">
         pref_key_pbh_pcb_fast_pcb_test_percentage</string>
     <string name="pref_key_pbh_pcb_fast_pcb_test_blocking_duration" translatable="false">
@@ -133,6 +140,7 @@
     <string name="pref_key_btn_app_secret" translatable="false">pref_key_btn_app_secret</string>
     <string name="pref_key_btn_submit_bans" translatable="false">pref_key_btn_submit_bans</string>
     <string name="pref_key_btn_submit_swarm" translatable="false">pref_key_btn_submit_swarm</string>
+    <string name="pref_key_btn_submit_history" translatable="false">pref_key_btn_submit_history</string>
     <string name="pref_key_btn_installation_id" translatable="false">pref_key_btn_installation_id</string>
     <string name="pref_key_show_nat_errors" translatable="false">pref_key_show_nat_errors</string>
     <string name="pref_key_anonymous_mode" translatable="false">pref_key_anonymous_mode</string>

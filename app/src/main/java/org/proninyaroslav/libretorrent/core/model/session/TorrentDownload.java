@@ -107,6 +107,12 @@ public interface TorrentDownload
 
     List<PeerInfo> getPeerInfoList();
 
+    /*
+     * The raw peer list including the extra fields of AdvancedPeerInfo
+     * (port, peer id, piece bitfield, uTP flag).
+     */
+    List<AdvancedPeerInfo> getAdvancedPeerInfoList();
+
     long getTotalWanted();
 
     void replaceTrackers(@NonNull Set<String> trackers);

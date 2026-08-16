@@ -35,9 +35,10 @@ public class BtnSettings {
     /* Random, persisted installation id used for anonymous auth */
     public final String installationId;
 
-    /* Whether user consented to submit bans / swarm data to the server */
+    /* Whether user consented to submit bans / swarm / history data to the server */
     public final boolean submitBansEnabled;
     public final boolean submitSwarmEnabled;
+    public final boolean submitHistoryEnabled;
 
     private BtnSettings(Builder b) {
         this.enabled = b.enabled;
@@ -47,6 +48,7 @@ public class BtnSettings {
         this.installationId = b.installationId;
         this.submitBansEnabled = b.submitBansEnabled;
         this.submitSwarmEnabled = b.submitSwarmEnabled;
+        this.submitHistoryEnabled = b.submitHistoryEnabled;
     }
 
     public boolean complete() {
@@ -68,6 +70,7 @@ public class BtnSettings {
         private String installationId = "";
         private boolean submitBansEnabled = false;
         private boolean submitSwarmEnabled = false;
+        private boolean submitHistoryEnabled = false;
 
         public Builder enabled(boolean v) { this.enabled = v; return this; }
         public Builder configUrl(String v) { this.configUrl = v; return this; }
@@ -76,6 +79,7 @@ public class BtnSettings {
         public Builder installationId(String v) { this.installationId = v; return this; }
         public Builder submitBansEnabled(boolean v) { this.submitBansEnabled = v; return this; }
         public Builder submitSwarmEnabled(boolean v) { this.submitSwarmEnabled = v; return this; }
+        public Builder submitHistoryEnabled(boolean v) { this.submitHistoryEnabled = v; return this; }
 
         public BtnSettings build() {
             return new BtnSettings(this);

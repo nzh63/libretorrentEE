@@ -66,7 +66,7 @@ public class PeerBanHelperEngineTest {
                 Collections.emptySet(),
                 Collections.singletonList(new BtnRuleSet.ClientNameRule(
                         BtnRuleSet.ClientNameRule.Method.STARTS_WITH, "xunlei")),
-                "", "", ""));
+                Collections.emptyList(), "", "", ""));
         List<TorrentSnapshot> torrents = Collections.singletonList(
                 snapshot("t1", banPeers()));
         Set<String> banned = engine.evaluateBanSet(torrents, settings());
@@ -91,7 +91,7 @@ public class PeerBanHelperEngineTest {
     @Test
     public void evaluate_ignoresGoodPeers() {
         PeerBanHelperEngine engine = new PeerBanHelperEngine();
-        PeerSnapshot good = new PeerSnapshot("8.8.8.8", 6881, "qBittorrent", 50L * 1024 * 1024, 0, 900_000, 100, 0);
+        PeerSnapshot good = new PeerSnapshot("8.8.8.8", 6881, "qBittorrent", "", 50L * 1024 * 1024, 0, 900_000, 100, 0);
         List<TorrentSnapshot> torrents = Collections.singletonList(
                 new TorrentSnapshot("t1", "T", 100L * 1024 * 1024, 0, false, Collections.singletonList(good)));
         Set<String> banned = engine.evaluateBanSet(torrents, settings());
@@ -106,7 +106,7 @@ public class PeerBanHelperEngineTest {
                 Collections.emptySet(),
                 Collections.singletonList(new BtnRuleSet.ClientNameRule(
                         BtnRuleSet.ClientNameRule.Method.STARTS_WITH, "xunlei")),
-                "", "", ""));
+                Collections.emptyList(), "", "", ""));
         List<TorrentSnapshot> torrents = Collections.singletonList(
                 snapshot("t1", banPeers()));
         var grouped = engine.evaluateGrouped(torrents, settings());
@@ -121,7 +121,7 @@ public class PeerBanHelperEngineTest {
         PbhSettings s = settings();
         // Trigger PCB tracking for two torrents
         engine.evaluate(Collections.singletonList(snapshot("t1", banPeers())), s);
-        PeerSnapshot other = new PeerSnapshot("9.9.9.9", 6881, "client",
+        PeerSnapshot other = new PeerSnapshot("9.9.9.9", 6881, "client", "",
                 150L * 1024 * 1024, 0, 0, 100, 0);
         engine.evaluate(Collections.singletonList(snapshot("t2",
                 Collections.singletonList(other))), s);
@@ -140,11 +140,11 @@ public class PeerBanHelperEngineTest {
     private List<PeerSnapshot> banPeers() {
         List<PeerSnapshot> peers = new ArrayList<>();
         // Vampire: high upload, zero progress.
-        peers.add(new PeerSnapshot("1.1.1.1", 6881, "client", 10_000, 0, 0, 100, 0));
+        peers.add(new PeerSnapshot("1.1.1.1", 6881, "client", "", 10_000, 0, 0, 100, 0));
         // BTN client-name rule match (STARTS_WITH xunlei).
-        peers.add(new PeerSnapshot("2.2.2.2", 6881, "Xunlei Thunder", 10, 0, 0, 0, 0));
+        peers.add(new PeerSnapshot("2.2.2.2", 6881, "Xunlei Thunder", "", 10, 0, 0, 0, 0));
         // Excessive client: uploaded more than torrent size.
-        peers.add(new PeerSnapshot("3.3.3.3", 6881, "client", 150L * 1024 * 1024, 0, 0, 100, 0));
+        peers.add(new PeerSnapshot("3.3.3.3", 6881, "client", "", 150L * 1024 * 1024, 0, 0, 100, 0));
         return peers;
     }
 }

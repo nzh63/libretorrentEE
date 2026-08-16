@@ -58,6 +58,17 @@ public class BtnPeerIdentityParserTest {
     }
 
     @Test
+    public void parsesPeerIdRules() {
+        BtnRuleSet rules = BtnPeerIdentityParser.parse(json);
+        assertEquals(1, rules.peerIdRules.size());
+        BtnRuleSet.ClientNameRule rule = rules.peerIdRules.get(0);
+        assertEquals(BtnRuleSet.ClientNameRule.Method.STARTS_WITH, rule.method);
+        assertEquals("-xm", rule.content);
+        assertTrue(rule.matches("-xm0019abcdefghijk"));
+        assertTrue(!rule.matches("-TR0019abcdefghijk"));
+    }
+
+    @Test
     public void preservesMatchMethod() {
         BtnRuleSet rules = BtnPeerIdentityParser.parse(json);
         for (BtnRuleSet.ClientNameRule rule : rules.clientNameRules) {

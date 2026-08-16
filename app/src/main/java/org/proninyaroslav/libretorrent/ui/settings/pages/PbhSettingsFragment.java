@@ -81,6 +81,7 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
         bindSwitch(R.string.pref_key_pbh_anti_vampire_enabled, pref.pbhAntiVampireEnabled());
         bindSwitch(R.string.pref_key_pbh_pcb_enabled, pref.pbhPcbEnabled());
         bindSwitch(R.string.pref_key_pbh_pcb_block_excessive_clients, pref.pbhPcbBlockExcessiveClients());
+        bindSwitch(R.string.pref_key_pbh_range_ban_enabled, pref.pbhRangeBanEnabled());
 
         bindLong(R.string.pref_key_pbh_ban_duration, pref.pbhBanDuration());
         bindLong(R.string.pref_key_pbh_anti_vampire_upload_threshold, pref.pbhAntiVampireUploadThreshold());
@@ -88,10 +89,14 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
         bindLong(R.string.pref_key_pbh_pcb_torrent_minimum_size, pref.pbhPcbTorrentMinimumSize());
         bindLong(R.string.pref_key_pbh_pcb_ban_delay_duration, pref.pbhPcbBanDelayDuration());
         bindLong(R.string.pref_key_pbh_pcb_fast_pcb_test_blocking_duration, pref.pbhPcbFastPcbTestBlockingDuration());
+        bindLong(R.string.pref_key_pbh_range_ban_duration, pref.pbhRangeBanDuration());
 
         bindInt(R.string.pref_key_pbh_check_interval, pref.pbhCheckInterval());
         bindInt(R.string.pref_key_pbh_pcb_ipv4_prefix_length, pref.pbhPcbIpv4PrefixLength());
         bindInt(R.string.pref_key_pbh_pcb_ipv6_prefix_length, pref.pbhPcbIpv6PrefixLength());
+
+        bindInt(R.string.pref_key_pbh_range_ban_ipv4_prefix_length, pref.pbhRangeBanIpv4PrefixLength());
+        bindInt(R.string.pref_key_pbh_range_ban_ipv6_prefix_length, pref.pbhRangeBanIpv6PrefixLength());
 
         bindDouble(R.string.pref_key_pbh_pcb_excessive_threshold, pref.pbhPcbExcessiveThreshold());
         bindDouble(R.string.pref_key_pbh_pcb_maximum_difference, pref.pbhPcbMaximumDifference());
@@ -102,6 +107,7 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
         bindSwitch(R.string.pref_key_btn_enabled, pref.btnEnabled());
         bindSwitch(R.string.pref_key_btn_submit_bans, pref.btnSubmitBansEnabled());
         bindSwitch(R.string.pref_key_btn_submit_swarm, pref.btnSubmitSwarmEnabled());
+        bindSwitch(R.string.pref_key_btn_submit_history, pref.btnSubmitHistoryEnabled());
         bindText(R.string.pref_key_btn_config_url, pref.btnConfigUrl());
         bindText(R.string.pref_key_btn_app_id, pref.btnAppId());
         bindText(R.string.pref_key_btn_app_secret, pref.btnAppSecret());
@@ -180,6 +186,8 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
             pref.pbhPcbEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_pbh_pcb_block_excessive_clients))) {
             pref.pbhPcbBlockExcessiveClients((boolean) newValue);
+        } else if (key.equals(getString(R.string.pref_key_pbh_range_ban_enabled))) {
+            pref.pbhRangeBanEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_pbh_check_interval))) {
             int v = parseInt(newValue, pref.pbhCheckInterval());
             pref.pbhCheckInterval(v);
@@ -208,6 +216,10 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
             long v = parseLong(newValue, pref.pbhPcbFastPcbTestBlockingDuration());
             pref.pbhPcbFastPcbTestBlockingDuration(v);
             preference.setSummary(Long.toString(v));
+        } else if (key.equals(getString(R.string.pref_key_pbh_range_ban_duration))) {
+            long v = parseLong(newValue, pref.pbhRangeBanDuration());
+            pref.pbhRangeBanDuration(v);
+            preference.setSummary(Long.toString(v));
         } else if (key.equals(getString(R.string.pref_key_pbh_pcb_ipv4_prefix_length))) {
             int v = parseInt(newValue, pref.pbhPcbIpv4PrefixLength());
             pref.pbhPcbIpv4PrefixLength(v);
@@ -215,6 +227,14 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
         } else if (key.equals(getString(R.string.pref_key_pbh_pcb_ipv6_prefix_length))) {
             int v = parseInt(newValue, pref.pbhPcbIpv6PrefixLength());
             pref.pbhPcbIpv6PrefixLength(v);
+            preference.setSummary(Integer.toString(v));
+        } else if (key.equals(getString(R.string.pref_key_pbh_range_ban_ipv4_prefix_length))) {
+            int v = parseInt(newValue, pref.pbhRangeBanIpv4PrefixLength());
+            pref.pbhRangeBanIpv4PrefixLength(v);
+            preference.setSummary(Integer.toString(v));
+        } else if (key.equals(getString(R.string.pref_key_pbh_range_ban_ipv6_prefix_length))) {
+            int v = parseInt(newValue, pref.pbhRangeBanIpv6PrefixLength());
+            pref.pbhRangeBanIpv6PrefixLength(v);
             preference.setSummary(Integer.toString(v));
         } else if (key.equals(getString(R.string.pref_key_pbh_pcb_excessive_threshold))) {
             double v = parseDouble(newValue, pref.pbhPcbExcessiveThreshold());
@@ -238,6 +258,8 @@ public class PbhSettingsFragment extends CustomPreferenceFragment
             pref.btnSubmitBansEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_btn_submit_swarm))) {
             pref.btnSubmitSwarmEnabled((boolean) newValue);
+        } else if (key.equals(getString(R.string.pref_key_btn_submit_history))) {
+            pref.btnSubmitHistoryEnabled((boolean) newValue);
         } else if (key.equals(getString(R.string.pref_key_btn_config_url))) {
             String v = String.valueOf(newValue);
             pref.btnConfigUrl(v);

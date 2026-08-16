@@ -125,6 +125,34 @@
             android:dialogTitle="@string/pref_pbh_pcb_fast_pcb_test_blocking_duration_title"
             android:inputType="number" />
 
+        <org.proninyaroslav.libretorrent.ui.settings.customprefs.SwitchBarPreference
+            android:key="@string/pref_key_pbh_range_ban_enabled"
+            android:persistent="false"
+            android:summary="@string/pref_pbh_range_ban_summary"
+            android:title="@string/pref_pbh_range_ban_title" />
+
+        <EditTextPreference
+            android:key="@string/pref_key_pbh_range_ban_ipv4_prefix_length"
+            android:persistent="false"
+            android:title="@string/pref_pbh_range_ban_ipv4_prefix_length_title"
+            android:dialogTitle="@string/pref_pbh_range_ban_ipv4_prefix_length_title"
+            android:inputType="number" />
+
+        <EditTextPreference
+            android:key="@string/pref_key_pbh_range_ban_ipv6_prefix_length"
+            android:persistent="false"
+            android:title="@string/pref_pbh_range_ban_ipv6_prefix_length_title"
+            android:dialogTitle="@string/pref_pbh_range_ban_ipv6_prefix_length_title"
+            android:inputType="number" />
+
+        <EditTextPreference
+            android:key="@string/pref_key_pbh_range_ban_duration"
+            android:persistent="false"
+            android:title="@string/pref_pbh_range_ban_duration_title"
+            android:dialogTitle="@string/pref_pbh_range_ban_duration_title"
+            android:summary="@string/pref_pbh_range_ban_duration_summary"
+            android:inputType="number" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_btn_category">
@@ -171,6 +199,12 @@
             android:persistent="false"
             android:summary="@string/pref_btn_submit_swarm_summary"
             android:title="@string/pref_btn_submit_swarm_title" />
+
+        <org.proninyaroslav.libretorrent.ui.settings.customprefs.SwitchBarPreference
+            android:key="@string/pref_key_btn_submit_history"
+            android:persistent="false"
+            android:summary="@string/pref_btn_submit_history_summary"
+            android:title="@string/pref_btn_submit_history_title" />
 
     </PreferenceCategory>
 </PreferenceScreen>

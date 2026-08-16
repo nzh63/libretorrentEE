@@ -34,6 +34,37 @@ import static org.junit.Assert.assertTrue;
 public class BtnPayloadTest {
 
     @Test
+    public void buildSubmitHistory_containsLegacyFields() throws Exception {
+        BtnPayload.PeerHistoryEntry e = new BtnPayload.PeerHistoryEntry();
+        e.ipAddress = "1.2.3.4";
+        e.port = 6881;
+        e.peerId = "-xl0019";
+        e.clientName = "xl0019";
+        e.torrentIdentifier = "deadbeef";
+        e.torrentIsPrivate = true;
+        e.torrentSize = 12345;
+        e.downloaded = 10;
+        e.downloadedOffset = 100;
+        e.uploaded = 20;
+        e.uploadedOffset = 200;
+        e.firstTimeSeenMs = 1000;
+        e.lastTimeSeenMs = 2000;
+        e.peerFlag = "I";
+        byte[] payload = BtnPayload.buildSubmitHistory(5555, java.util.Collections.singletonList(e));
+        String json = new String(payload, java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"populate_time\":5555"));
+        assertTrue(json.contains("\"ip_address\":\"1.2.3.4\""));
+        assertTrue(json.contains("\"peer_id\":\"-xl0019\""));
+        assertTrue(json.contains("\"torrent_identifier\":\"deadbeef\""));
+        assertTrue(json.contains("\"torrent_is_private\":true"));
+        assertTrue(json.contains("\"downloaded_offset\":100"));
+        assertTrue(json.contains("\"uploaded_offset\":200"));
+        assertTrue(json.contains("\"first_time_seen\":1000"));
+        assertTrue(json.contains("\"last_time_seen\":2000"));
+        assertTrue(json.contains("\"peers\":["));
+    }
+
+    @Test
     public void buildSubmitBans_containsRequiredFields() {
         BtnPayload.BanEntry ban = new BtnPayload.BanEntry();
         ban.banAtMs = 1000;

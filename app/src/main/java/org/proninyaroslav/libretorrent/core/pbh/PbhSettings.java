@@ -51,6 +51,16 @@ public class PbhSettings {
     /* ---- IP / CIDR blacklist (PBH "IPAddressBlocker" module) ---- */
     public final Set<String> ipCidrBlacklist;
 
+    /* ---- Peer-id blacklist (PBH "PeerIdBlacklist" module) ---- */
+    public final Set<String> peerIdBlacklist;
+
+    /* ---- AutoRangeBan (PBH "AutoRangeBan" module, "连坐") ---- */
+    public final boolean rangeBanEnabled;
+    public final int rangeBanIpv4PrefixLength;
+    public final int rangeBanIpv6PrefixLength;
+    /* Ban duration for range bans; 0 = permanent */
+    public final long rangeBanDurationMs;
+
     /* ---- Progress Cheat Blocker (PBH "ProgressCheatBlocker" module) ---- */
     public final boolean pcbEnabled;
     /* Torrents smaller than this are ignored by the PCB */
@@ -85,6 +95,14 @@ public class PbhSettings {
     public static final int DEFAULT_PCB_IPV6_PREFIX_LENGTH = 64;
     public static final double DEFAULT_PCB_FAST_PCB_TEST_PERCENTAGE = 0.1d;
     public static final long DEFAULT_PCB_FAST_PCB_TEST_BLOCKING_DURATION_MS = 15_000L; /* 15 s */
+    /*
+     * AutoRangeBan defaults from upstream PeerBanHelper's profile.yml:
+     * enabled, IPv4 /30, IPv6 /48, 7-day ban duration.
+     */
+    public static final boolean DEFAULT_RANGE_BAN_ENABLED = true;
+    public static final int DEFAULT_RANGE_BAN_IPV4_PREFIX_LENGTH = 30;
+    public static final int DEFAULT_RANGE_BAN_IPV6_PREFIX_LENGTH = 48;
+    public static final long DEFAULT_RANGE_BAN_DURATION_MS = 7L * 24 * 60 * 60 * 1000;
 
     private PbhSettings(Builder b) {
         this.enabled = b.enabled;
@@ -94,6 +112,11 @@ public class PbhSettings {
         this.antiVampireUploadThreshold = b.antiVampireUploadThreshold;
         this.antiVampireMinProgressPpm = b.antiVampireMinProgressPpm;
         this.ipCidrBlacklist = immutableCopy(b.ipCidrBlacklist);
+        this.peerIdBlacklist = immutableCopy(b.peerIdBlacklist);
+        this.rangeBanEnabled = b.rangeBanEnabled;
+        this.rangeBanIpv4PrefixLength = b.rangeBanIpv4PrefixLength;
+        this.rangeBanIpv6PrefixLength = b.rangeBanIpv6PrefixLength;
+        this.rangeBanDurationMs = b.rangeBanDurationMs;
         this.pcbEnabled = b.pcbEnabled;
         this.pcbTorrentMinimumSize = b.pcbTorrentMinimumSize;
         this.pcbBlockExcessiveClients = b.pcbBlockExcessiveClients;
@@ -125,6 +148,11 @@ public class PbhSettings {
         private long antiVampireUploadThreshold = DEFAULT_ANTI_VAMPIRE_UPLOAD_THRESHOLD;
         private long antiVampireMinProgressPpm = DEFAULT_ANTI_VAMPIRE_MIN_PROGRESS_PPM;
         private Set<String> ipCidrBlacklist = new HashSet<>();
+        private Set<String> peerIdBlacklist = new HashSet<>();
+        private boolean rangeBanEnabled = DEFAULT_RANGE_BAN_ENABLED;
+        private int rangeBanIpv4PrefixLength = DEFAULT_RANGE_BAN_IPV4_PREFIX_LENGTH;
+        private int rangeBanIpv6PrefixLength = DEFAULT_RANGE_BAN_IPV6_PREFIX_LENGTH;
+        private long rangeBanDurationMs = DEFAULT_RANGE_BAN_DURATION_MS;
         private boolean pcbEnabled = true;
         private long pcbTorrentMinimumSize = DEFAULT_PCB_TORRENT_MINIMUM_SIZE;
         private boolean pcbBlockExcessiveClients = true;
@@ -144,6 +172,11 @@ public class PbhSettings {
         public Builder antiVampireUploadThreshold(long v) { this.antiVampireUploadThreshold = v; return this; }
         public Builder antiVampireMinProgressPpm(long v) { this.antiVampireMinProgressPpm = v; return this; }
         public Builder ipCidrBlacklist(Set<String> v) { this.ipCidrBlacklist = v; return this; }
+        public Builder peerIdBlacklist(Set<String> v) { this.peerIdBlacklist = v; return this; }
+        public Builder rangeBanEnabled(boolean v) { this.rangeBanEnabled = v; return this; }
+        public Builder rangeBanIpv4PrefixLength(int v) { this.rangeBanIpv4PrefixLength = v; return this; }
+        public Builder rangeBanIpv6PrefixLength(int v) { this.rangeBanIpv6PrefixLength = v; return this; }
+        public Builder rangeBanDurationMs(long v) { this.rangeBanDurationMs = v; return this; }
         public Builder pcbEnabled(boolean v) { this.pcbEnabled = v; return this; }
         public Builder pcbTorrentMinimumSize(long v) { this.pcbTorrentMinimumSize = v; return this; }
         public Builder pcbBlockExcessiveClients(boolean v) { this.pcbBlockExcessiveClients = v; return this; }
