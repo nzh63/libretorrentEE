@@ -1,0 +1,110 @@
+name: Android Release APK
+
+# 1) push 到 master（或手动触发）时：打包 release APK 并上传为构建产物
+# 2) push 带 tag（如 4.1.1）时：额外把 APK 附加到 GitHub Release 页面
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # 签名密钥一律走 GitHub Secrets（key.properties / keystore 均在 .gitignore 中）
+      # 未配置 secrets 时构建不签名（app/build.gradle 已有保护逻辑，不会失败）
+      SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+      SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+      SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+      SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # 缓存 ~/.gradle（含依赖与自动下载的 daemon JVM / toolchain）
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Configure signing (if secrets provided)
+        shell: pwsh
+        run: |
+          $s = @($env:SIGNING_KEYSTORE_BASE64, $env:SIGNING_KEYSTORE_PASSWORD, $env:SIGNING_KEY_ALIAS, $env:SIGNING_KEY_PASSWORD)
+          if ($s -notcontains '' -and $s -notcontains $null) {
+            New-Item -ItemType Directory -Force -Path keystore | Out-Null
+            [IO.File]::WriteAllBytes("keystore/jks", [Convert]::FromBase64String($env:SIGNING_KEYSTORE_BASE64))
+            $lines = @(
+              "storeFile=keystore/jks",
+              "storePassword=$env:SIGNING_KEYSTORE_PASSWORD",
+              "keyAlias=$env:SIGNING_KEY_ALIAS",
+              "keyPassword=$env:SIGNING_KEY_PASSWORD"
+            )
+            $lines | Set-Content -Encoding ascii key.properties
+            Write-Output "Signing configured"
+          } else {
+            Write-Output "No signing secrets - building unsigned release APK"
+          }
+
+      - name: Build release APKs
+        run: ./gradlew --no-daemon --console=plain assembleRelease
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apks
+          path: app/build/outputs/apk/**/release/*.apk
+          if-no-files-found: error
+
+  release:
+    # 只有 push 了 tag 才执行
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: release-apks
+          path: apks
+
+      # 从 NEWS.md 提取当前版本对应的变更说明（匹配 "### Version <tag>" 开头到下一个版本标题）
+      - name: Extract release notes from NEWS.md
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          python3 - "$TAG" <<'EOF'
+          import re, sys, pathlib
+          tag = sys.argv[1]
+          version = tag[1:] if tag.startswith(('v', 'V')) else tag
+          text = pathlib.Path("NEWS.md").read_text(encoding="utf-8")
+          m = re.search(rf"^### Version {re.escape(version)}\b.*?(?=^### Version |\Z)", text, re.M | re.S)
+          notes = m.group(0).strip() if m else f"Release {version}"
+          pathlib.Path("release_notes.md").write_text(notes, encoding="utf-8")
+          EOF
+
+      - name: Create GitHub Release and attach APKs
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          files: apks/**/*.apk
+          fail_on_unmatched_files: false
